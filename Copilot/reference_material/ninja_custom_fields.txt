@@ -1,0 +1,81 @@
+Topic
+This guide provides instructions for creating and mapping device role, global, and end user custom fields. For instructions to create custom fields, refer to Custom Field Setup.
+
+Environment
+NinjaOne Endpoint Management
+NinjaOne Documentation
+Description
+Select a custom field type to learn more: 
+
+Custom Field Details
+Custom Field Type Descriptions
+About Secure Custom Fields
+Custom Field Details
+When you create a custom field, the Details section allows you to add a description, tooltip, or footer to the field. This section illustrates what those details look like when the custom field is displayed on the dashboard. 
+
+Custom Field is Required
+Custom fields that are required to be filled out display with an asterisk next to the field name. If the technician attempts to save without completing the required field, it turns red and rejects the save attempt. 
+CF_required ex.png
+
+Custom Field Tooltips
+The text you enter during the configuration is what appears when the technician moves their cursor over the icon next to the field name.
+
+CF_tooltip ex.png
+
+Custom Field Footers
+The text you enter during the configuration is what appears under the data field.
+
+CF_footer ex.png
+
+Custom Field Type Descriptions
+This section provides a description of each custom field and the data you can provide for each.
+
+Custom Field Type	Description
+Attachment	Allows a photo or document to be attached to a custom field. As an example, a docx file containing procedures.
+By default, Attachment fields restrict file size to 20 MB. In the Advanced Settings, you can review accepted file types and, optionally, modify the restrictions.
+You can only attach one file at a time; click the X next to the file name to delete the current attachment. 
+Checkbox	A checkbox can confirm an answer or provide a binary choice. For example, it could signal whether a device's OS is up to date. The set value for the Checkbox field must be either true (1) or false (0).
+If the box is checked, "Yes" is displayed. If it is not checked, "No" is displayed. 
+Date 	This custom field allows technicians to select a date from the calendar. Use the Advanced Settings to filter date options, such as including or excluding specific dates or restricting a technician's selection to future or past dates only. 
+Date/Time	This custom field allows technicians to select a date from the calendar and add a time. Use the Advanced Settings to filter date options, such as including or excluding specific dates or restricting a technician's selection to future or past dates only. 
+Decimal	This field accepts numeric values with a decimal point. You can only enter one decimal point into this field. 
+By default, the Decimal field will accept any numeric decimal in the range -9999999.999999 to 9999999.999999. However, in the Advanced Settings, when creating or editing a decimal field, it may be restricted to a smaller numeric range.
+Device dropdown	The device drop-down links to a device, giving quicker access to that device. 
+By default, the device that can be selected in a Device dropdown field is unrestricted. However, in the Advanced Settings, you can restrict the available devices to certain organizations or device types.
+When you click the data, you will navigate to the applicable dashboard in NinjaOne. 
+Device multi-select	This list shows all devices for all organizations within NinjaOne. Click all options that apply to populate the field. You can group devices for quick access, such as all Microsoft Windows workstations.
+By default, there are no restrictions on what device you can select in a Device multi-select field. However, in the Advanced Settings, you can restrict the available devices to certain organizations or device types.
+When you click the data, you will navigate to the applicable dashboard in NinjaOne. 
+Drop-down	This list shows all the values you provided during the configuration of the custom field. When configuring this custom field, you must set an option value, such as: enabled, disabled, unknown, or other.
+For the Dropdown field, the set value must be an exact match for a valid option (either using the GUID or the field name as listed when the options command is run).
+Email	Store contact info or support emails in this custom field. For example, the email can connect a technician to the end user for a terminal. 
+This field allows a valid email to be added in the format of xxx@<domain>.xxx. When you click the data, it opens to your default email software.
+Integer	This field allows technicians to type a number from their keyboard or click the arrows to input data. This function can gather numerical values. 
+By default, the Integer field will accept any number within the range -2147483648 to 2147483647. Use the Advanced Settings to change the default. 
+IP address	This feature can be used to display the IP address of a device. 
+The IP address field is configured to only accept valid IP addresses. If you enter invalid content, the field will highlight red and notify you that an error has occurred. 
+By default, the IP address field will accept any IP in either IPv4 or IPv6 format. Use the Advanced Settings to change the default. 
+Multi-line	Multi-line allows for numerous lines of text to be entered, but the text cannot be formatted. Multi-line fields have a text limit of 10000 characters. 
+Multi-select	This list shows all the values provided during the configuration of the custom field. Click all options that apply to populate the field. Multi-select creates a field in which multiple items can be selected and displayed. For example, the field can be used to provide a list of common applications installed on a given device.
+When configuring this custom field, you must set an option value, such as enabled, disabled, unknown, and others.
+Organization dropdown	This feature allows you to select an organization that exists in NinjaOne. When you click the data, you will navigate to the applicable dashboard in NinjaOne. 
+Organization location dropdown	This list shows all the locations for all organizations within NinjaOne. 
+By default, there are no restrictions to which organization's locations can be selected in an Organization location dropdown field. Use the Advanced Settings to change the default. 
+When you click the data, you will navigate to the applicable dashboard in NinjaOne. 
+Organization location multi-select	Lists all locations for all organizations within NinjaOne. Click all options that apply to populate the field. The field can be used when multiple locations are relevant. For example, a list of locations affected by a particular server.
+By default, there are no restrictions to which organization's locations can be selected in an Organization location multi-select field. Use the Advanced Settings to change the default. 
+When you click the data, you will navigate to the applicable dashboard in NinjaOne. 
+Organization multi-select	Lists all organizations within NinjaOne. Click all options that apply to populate the field. The multi-select field can be used when multiple organizations are relevant. For example, a list of organizations affected by a particular server.
+When you click the data, you will navigate to the applicable dashboard in NinjaOne. 
+Phone	This field can pull and store a phone number. For example, the phone number could represent the contact for vendor support. This field accepts valid phone numbers and will display in red text if an invalid phone number entry is added.
+Text	This field allows for a single line of text. Text can be used to store or retrieve information. Text fields have a limit of 200 characters. An example would be a license key.
+Time	Time fields allow tracking of a specific time, such as the last time a user logged in. This field allows technician to enter a specific time to the minute. 
+For the Time field, the set value must be in seconds or in ISO format (HH:mm:ss).
+TOTP	This custom field allows you to store data for time-based one-time passwords. Technicians who are given permission to view this field will see a new TOTP secret generate every 30 seconds.
+URL	This field allows technician to enter a URL or Web address. You do not need to enter the "www" prefix, but you must include the top-level domain (com, org, net). There is a 200-character limit for URL fields. 
+WYSIWYG	Use the WYSIWYG menu to format text. This text field allows for text with bold, strikethrough, italic, underlined, code block, quote block, or hyperlink text. You can attach files and photo attachments to this field. 
+About Secure Custom Fields
+Secure fields can be used to store sensitive data including passwords. Secure fields may have a limit of between 200 and 10,000 characters (the limit may be configured in the Advanced Settings for the field, as shown below). By default, the password is hidden and will not show up in an exported .csv file.
+
+When creating or editing a Secure field, you can use the Advanced Settings to configure complexity rules to require one integer, one uppercase letter, one lowercase letter, and at least six characters. The Advanced Settings also include an option to set a maximum character limit between 200 and 10,000 characters.
+When viewing, the field shows no value even if there is data entered. 

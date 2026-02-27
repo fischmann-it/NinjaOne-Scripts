@@ -1,0 +1,870 @@
+The ninjarmm-cli component is an executable file that allows you to access and interact with specific custom fields and documentation data from the command-line interface (CLI), terminal, or custom scripts.
+
+Select a category to learn more:
+
+Important Notes
+Accessing Secure Fields via Automations
+Interacting with Custom Fields via Windows CLI or Terminal
+NinjaOne PowerShell Module
+Interacting with Custom Fields via Windows CLI commands, Batch Custom Scripts, ShellScript on UNIX, or ShellScript Custom Scripts
+Interacting with Custom Fields via PowerShell Commands or Custom Scripts
+Additional Resources
+Important Notes
+Before you use ninjarmm-cli, you should consider the following:
+
+Secure fields are write-only for documentation fields.
+For the full breakdown of supported fields, refer to Command Line Interface (CLI) Supported Fields and Functionality.
+You can read or write documentation data to the CLI or custom scripts. You can generate a list of templates, a list of the documents by template name or identification number, and the value of each field in a document.
+CLI or custom scripts can only access templates and documents that contain at least one filled field. Empty templates and documents will not display.
+You can use custom scripts written in either Batch or PowerShell for Windows, or in ShellScript for macOS and Linux. Because the ninjarmm-cli.exe resides in a protected folder that is inaccessible to regular users, you should run any script using this functionality as the system, or you should change permissions accordingly.
+PowerShell versions 1 and 2 are not supported.
+To learn which fields support access via CLI and custom scripts, refer to Command Line Interface (CLI) Supported Fields and Functionality.
+For Linux devices, you must add ./ in front of ninjarmm-cli in the terminal to execute the command correctly.
+For Windows devices, if you need to store the output of the ninjarmm-cli get command in a variable, you may use the optional parameter --direct-out to force the use of the stdout standard output channel instead of Windows API functions like WriteConsoleW/WriteFile. However, by doing so, you can potentially lose the Unicode output support, which does not work correctly on some Windows versions with the stdout channel. Refer to the following example of this command:
+ ninjarmm-cli --direct-out get [field name]
+Accessing Secure Fields via Automations
+You cannot exceed 200 characters for secure fields.
+Any automation that you run from the Automation Library can access secure fields, which include:
+
+Script conditions
+Script compound conditions
+Policy scheduled tasks
+Global scheduled tasks
+Run before actions on backup, patching, installing the application, and similar tasks
+Run after actions on backup, patching, installing the application, and similar tasks
+Automation actions on conditions
+Run automation
+Some important things to note regarding secure fields include:
+
+NinjaOne only provides access to secure custom fields during the execution of automation.
+The web terminal or local terminal cannot access secure custom fields.
+Only commands run on a local device initiated by NinjaOne can access custom fields, including GET and SET operations, custom secure fields, and documentation secure fields. However, documentation secure fields only use SET operations via the CLI.
+Interacting with Custom Fields via Windows CLI or Terminal
+The agent automatically unpacks this executable to the following folders:
+
+Windows: C:\ProgramData\NinjaRMMAgent\ninjarmm-cli.exe
+macOS: /Applications/NinjaRMMAgent/programdata/ninjarmm-cli
+Linux: /opt/NinjaRMMAgent/programdata/ninjarmm-cli
+For Windows, use the following special system-level environment variable:
+
+Windows: %NINJARMMCLI% for C:\ProgramData\NinjaRMMAgent\ninjarmm-cli.exe
+Linux: $NINJA_DATA_PATH/ninjarmm-cli set $fieldname $variable
+The NinjaRMM CLI looks similar to the following Windows example:
+
+c:\ProgramData\NinjaRMMAgent\ninjarmm-cli.exe help
+
+ninjarmm-cli - CLI tool to access and manage NinjaRMM Agent Custom Fields.
+Usage:
+  help - show this text
+
+Global and Role fields:
+
+get <attribute name> - get value of the attribute with specified name
+
+set <attribute name> <attribute value and comma-separated values list> - set value to the specified attribute
+   --stdin - optional modifier to use piped data. For example: dir | %NINJARMMCLI% set --stdin myfield
+
+options <attribute name> - get list of the valid values for attribute name (actual for drop-down and multi-select attributes)
+
+Documentation fields:
+
+templates - get a list of the templates, which have documents and attributes
+   --ids, --names - optional modifiers
+
+documents "<template id/name>" - get a list of the documents for the template by id or name (quotes required)
+   --ids, --names - optional modifiers
+
+get "<template id/name>" "<document name>" <attribute name> - get attribute from document by document name and template id/name (quotes required)
+
+get "<single template name>" <attribute name> - get attribute from single document by template name (quotes required)
+
+org-set "<template id/name>" "<document name>" <attribute name> "<attribute value and comma-separated values list>" - set attribute to the specified document/attribute by document name and template id/name (quotes required)
+
+org-set "<single template name>" <attribute name> "<attribute value and comma-separated values list>" - set attribute to single document/attribute by template name (quotes required)
+
+org-clear "<template id/name>" "<document name>" <attribute name> - clear value of document by document name and template id/name (quotes required, represents as NULL)
+
+org-clear "<single template name>" <attribute name> - clear the value of a single document by template name (quotes required, represents as NULL)
+
+org-options "<template id/name>" "<document name>" <attribute name> - get list of the valid values for document attribute name by document name and template id/name (actual for drop-down and multi-select attributes)
+
+org-options "<single template name>" <attribute name> - get a list of the valid values for a single document attribute name by template name (actual for drop-down and multi-select attributes)
+
+Output format:
+
+exit codes: 0 - Success, 1 - Error
+
+on success: exit with 0 and print value
+
+on error:   exit with 1 and print error description
+
+to read exit code: Win: 'echo %errorlevel%', Unix: 'echo $?'
+
+Attribute types:
+
+  CheckBox - Boolean type, acceptable values: 0, 1, true, false
+
+  Numeric - Integer type, values range from -2147483648 to 2147483647, supports Advanced Input filter settings.
+
+  Decimal - Float type, values range from -9999999.999999 to 9999999.999999, supports Advanced Input filter settings.
+
+  TextMultiLine, Text - regular string
+
+  TextEmail - regular string, should match RFC 5322 Email format
+
+  TextIpAddress - regular string, should match IPv4 or IPv6 format, supports Advanced Input filter settings
+
+  TextPhone - regular string, should match E.164 phone number format
+
+  TextEncrypted - regular encrypted string, supports Advanced Input filter settings (write-only for Documentation)
+
+  DateTime - Integer seconds since start of Unix epoch or ISO format 'yyyy-MM-ddTHH:mm: ss' without TimeZone (UTC)
+
+  Date - Integer seconds since start of Unix epoch or ISO format 'yyyy-MM-dd'
+
+  Time - Integer seconds or ISO format 'HH:mm:ss'
+
+  MultiSelect - list of unique options (view <options> command)
+
+  MultiSelectNode, MultiSelectClient, MultiSelectClientLocation - (read-only by CLI) organization-related data
+
+  Drop-down - one unique option (see <options> command)
+
+  DropdownNode, DropdownClient, DropdownClientLocation - (read-only by CLI) organization-related data
+
+  Attachment - (read-only by CLI) JSON-object with information about the file.
+
+  WYSIWYG - (read-only by CLI) JSON-object with HTML and TEXT content
+NinjaOne PowerShell Module
+When you install the NinjaOne agent, NinjaOne deploys and loads a custom NinjaOne PowerShell module for interacting with custom fields. You can access the ninjarmm-cli on Windows devices via this PowerShell module simply by calling the function names within PowerShell.
+
+NinjaOne PowerShell Commands
+The PowerShell commands you can run are detailed below.
+
+Get-NinjaProperty 
+The Get-NinjaProperty command is an evolution of the original Ninja-Property-Get command. The Get-NinjaProperty function retrieves and converts a Ninja custom field value based on the specified field name and type.
+
+The command accepts a field name, a property type, and an optional document name. When you provide a document name, the function will retrieve the property value from the specified Ninja document. Depending on the specified type (for example, Date, DateTime, Checkbox, Dropdown, etc.), the function will convert the raw value into an appropriate PowerShell object. If the property type requires additional options such as dropdowns or multi-select fields, the function retrieves these options and returns a user-friendly value.
+
+Supported types include: Attachment, Checkbox, Date, DateTime, Decimal, Device Dropdown, Device MultiSelect, Dropdown, Email, Integer, IP Address, MultiLine, MultiSelect, Organization Dropdown, Organization Location Dropdown, Organization Location MultiSelect, Organization MultiSelect, Phone, Secure, Text, Time, WYSIWYG, and URL.
+
+The syntax is as follows: Get-NinjaProperty [-Name] <String[]> [[-Type] <String>] [[-DocumentName] <String>] [<CommonParameters>]
+
+Examples
+Retrieving a custom field dropdown without specifying type returns the GUID value of the selected dropdown option.
+
+powershell1-upscaled.png
+Figure 1: No field type specified (click to enlarge)
+Retrieving a custom field drop-down while specifying the custom field type (dropdown) results in the command returning the user-friendly value seen inside the platform instead of the GUID value.
+
+powershell2-upscaled.png
+Figure 2: Field type specified (click to enlarge)
+Set-NinjaProperty
+The Set-NinjaProperty command is an evolution of the original Ninja-Property-Set command. The Set-NinjaProperty function sets a custom field based on the provided parameters. When given a field type, it attempts to convert the provided value to one supported by that particular field. For example, when given a DateTime object and the type "Date" is specified, it converts the date object to a Unix epoch timestamp and sets the field with that value.
+
+It can also set drop-down and multi-select fields using field names rather than their GUIDs.
+
+Supported types include: Checkbox, Date, Date or Date Time, DateTime, Decimal, Dropdown, Email, Integer, IP Address, MultiLine, MultiSelect, Phone, Secure, Text, Time, URL, and WYSIWYG.
+
+Examples
+Setting a drop-down custom field without specifying the field type requires the unique GUID value for the desired drop-down option.
+
+powershell3-upscaled.png
+Figure 3: No field type specified (click to enlarge)
+Setting a drop-down custom field while specifying the field type as dropdown allows you to use the user-friendly value that's shown inside the platform instead of the GUID value.
+
+powershell4-upscaled.png
+Figure 4: Field type specified (click to enlarge)
+Both commands, Get-NinjaProperty and Set-NinjaProperty, have full Unicode support so that you can set and retrieve emojis via these commands.
+
+You can access additional details and examples for both commands by opening PowerShell on a device with the NinjaOne agent installed and entering:
+
+Get-Help Get-NinjaProperty
+Or
+
+Get-Help Set-NinjaProperty
+All original NinjaOne PowerShell commands still function as originally designed. Those commands are:
+
+Ninja-Property-Get $AttributeName
+Ninja-Property-Set $AttributeName $Value
+Ninja-Property-Options $AttributeName
+Ninja-Property-Clear $AttributeName
+Documentation Commands
+Ninja-Property-Docs-Templates
+Ninja-Property-Docs-Names $TemplateId
+Ninja-Property-Docs-Names "$TemplateName"
+Ninja-Property-Docs-Get $TemplateId "$DocumentName" $AttributeName
+Ninja-Property-Docs-Set $TemplateID "$DocumentName" $AttributeName "value"
+Ninja-Property-Docs-Get-Single "templateName" "fieldName"
+Ninja-Property-Docs-Set-Single "templateName" "fieldName" "new value"
+Ninja-Property-Docs-Clear
+Ninja-Property-Docs-Options
+Ninja-Property-Docs-Clear-Single - clear value of single document by template name (quotes required, represented as NULL)
+Ninja-Property-Docs-Options-Single - get list of the valid values for single document attribute name by template name (actual for drop-down and multi-select attributes)
+Interacting with Custom Fields via Windows CLI Commands, Batch Custom Scripts, ShellScript on UNIX, or ShellScript Custom Scripts
+The examples in this section show how to use commands and batch scripts for specific types of custom fields. They describe calls to the ninjarmm-cli without a full path, but you can specify the full path based on your platform, as described earlier in this article. There are no differences between calls to the CLI utility on different platforms.
+
+Timestamp
+Time is calculated as follows:
+
+The system references January 1, 1970, at 00:00:00 UTC as the Unix epoch.
+The date value is seconds from January 1, 1970, at 00:00:00 UTC. You may use a timestamp converter tool to obtain this value for a human-readable date.
+If you set the value in ISO format, it will be converted to the seconds from 1970-01-01 in UTC.
+The examples in this section show how to use PowerShell commands or scripts for specific types of custom fields.
+
+Select a topic to continue:
+
+Checkbox
+Date
+Date/Time
+Decimal
+Dropdown
+Email
+Integer
+IP Address
+Multi-Line
+Multi-Select
+Phone Number
+Secure
+Text
+Time
+URL
+Documentation Fields
+Checkbox
+For the Checkbox field, the set value must be either true (1) or false (0).
+Get:
+
+# get value for checkbox field
+> ninjarmm-cli get globalcheckbox
+0
+Set:
+
+# set a boolean value to the checkbox field
+> ninjarmm-cli set globalcheckbox 0
+0
+> ninjarmm-cli set globalcheckbox 1
+1
+> ninjarmm-cli set globalcheckbox true
+1
+> ninjarmm-cli set globalcheckbox false
+0
+Date
+For the Date field, the set value must be in seconds or ISO (International Organization for Standardization) format (yyyy-mm-dd in UTC).
+Get:
+
+# get value for date field
+> ninjarmm-cli get globaldate
+456
+Set:
+
+# set value to date field
+> ninjarmm-cli set globaldate 1626875470000
+
+> ninjarmm-cli set testdate 2021-10-15
+1634256000
+Date/Time
+For the Date/Time field, the set value must be in seconds or ISO format (yyyy-mm-dd or thh:mm:ss in UTC).
+Get:
+
+# get value for date-time field
+> ninjarmm-cli get globaldatetime
+1626875470000
+Set:
+
+# set value to date-time field
+> ninjarmm-cli set globaldatetime 1626875470000
+1626875470000
+
+> ninjarmm-cli set testdatetime 2021-10-15T00:00:00
+1634256000
+Decimal
+For the Decimal field, the set value must be a number and within the range of -9999999.999999 to 9999999.999999.
+Get:
+
+# get value for decimal field
+> ninjarmm-cli get globaldecimal
+123.456
+Set:
+
+# set value to decimal field
+> ninjarmm-cli set typedecimal 1
+1
+
+> ninjarmm-cli set typedecimal 1.23
+1.23
+
+> ninjarmm-cli set typedecimal 1.23
+1.23
+
+> ninjarmm-cli set typedecimal 1.2345678901234567890
+1.234567 # truncated to max precision, better not to use a shorter value to avoid data type conversion issues
+
+> ninjarmm-cli set typedecimal 1234567890.1234567890
+1234567890.123457
+Dropdown
+For the Dropdown field, the set value must be an exact match for a valid option, either using the GUID (Globally Unique Identifier) or the field name as listed when you run the options command.
+Options:
+
+# list options for the dropdown field
+> ninjarmm-cli options globaldropdown
+333f541e-747e-4a1e-a2e2-a82c1c2f2008=Option2
+74a6ffda-708e-435a-86e3-40b67c4f981a=Option1
+f1ba449c-fd34-49df-b878-af3877180d17=Option3
+Get the GUID by option name:
+
+# find the option GUID by the option name for the dropdown field
+> ninjarmm-cli options globaldropdown | grep "Option 1" | awk -F= '{print $1}'
+74a6ffda-708e-435a-86e3-40b67c4f981a
+Get:
+
+# get value for dropdown field
+> ninjarmm-cli get globaldropdown
+74a6ffda-708e-435a-86e3-40b67c4f981a
+Set:
+
+# set value to the dropdown field
+> ninjarmm-cli set globaldropdown f1ba449c-fd34-49df-b878-af3877180d17
+Email
+Get:
+
+# get stored value
+> ninjarmm-cli get typeemail
+test@test.test
+Set:
+
+# correct values
+> ninjarmm-cli set typeemail test@test.test
+test@test.test
+
+> ninjarmm-cli set typeemail test@test123.test.othertest
+test@test123.test.othertest
+
+# set wrong values
+> ninjarmm-cli set typeemail test@test.test123
+Error: Wrong value format or type...
+Integer
+For the Integer field, the set value must be an integer (a whole number with no decimals) within the range of -2147483648 to 2147483647.
+Get:
+
+# get value for integer field
+> ninjarmm-cli get globalinteger
+456
+Set:
+
+# set value to integer field
+> ninjarmm-cli set globalinteger 123
+IP Address
+For the IP field, the set value must be in IPv4 (Internet Protocol version 4) or IPv6 (Internet Protocol version 6) format.
+Get:
+
+# get stored value
+> ninjarmm-cli get typeipaddress
+192.168.1.100
+Set:
+
+# set correct values
+> ninjarmm-cli set typeipaddress 255.255.255.255
+255.255.255.255
+
+> ninjarmm-cli set typeipaddress 0.0.0.0
+0.0.0.0
+
+# set wrong values
+> ninjarmm-cli set typeipaddress 192.168.1.
+Error: Wrong value format / type ...
+
+> ninjarmm-cli set typeipaddress 255.255.255.256
+Error: Wrong value format / type ...
+
+> ninjarmm-cli set typeipaddress 0.-1.0.0
+Error: Wrong value format / type ...
+Multi-line
+Get:
+
+# get multi-line field
+> ninjarmm-cli get globalmultiline
+sampletext1
+Set:
+
+# set text field
+> ninjarmm-cli set globalmultiline sampletext2
+
+Set (alternate):
+
+# set text field with piped data
+> ls -alh | ninjarmm-cli set globalmultiline
+NinjaOne supports the use of a single multi-line string if you use the `n (the "backtick" or "backspark" key plus letter "n") control character. The text must be entered into the command prompt as a single line of text due to CLI or Terminal restrictions and is limited to 10,000 characters. You can also incorporate spaces by putting the entire string in quotes. When you use these control characters, the data will display as follows:
+
+Ninja-Property-Set multiline "line with spaces'nline2'nline3'nfinalval"
+
+multiline
+line with spaces
+line2
+line3
+finalval
+The default syntax of the "Set" command is enough for most cases. With default syntax, the 'ninjarmm-cli' tool takes the data from the command line arguments. But sometimes it is not enough, and you need to get the data from the stdin (standard input) channel.
+
+For example, when you need to set data to the Multi-line text field, or you want to get output from the file and store it in the field. Or, to prevent the break of tabs or spaces in the formatted output of other applications.
+
+To do so, the CLI tool provides an alternate syntax with the --stdin parameter. So, when you use this argument, you should provide the data as an input on the stdin channel, using Unix pipes. For example: dir | ninjarmm-cli set --stdin [my field name] or cat /proc/cpuinfo | grep vendor_id | ninjarmm-cli set --stdin [another field name]. The piped data will be stored in the target field if it meets all field type conditions.
+
+Multi-Select
+Options:
+
+# list options for multi-select field
+> ninjarmm-cli options globalmultiselect
+333f541e-747e-4a1e-a2e2-a82c1c2f2008=Option2
+74a6ffda-708e-435a-86e3-40b67c4f981a=Option1
+f1ba449c-fd34-49df-b878-af3877180d17=Option3
+Get the GUID by option name:
+
+# find option GUID by the option name for the multi-select field
+> ninjarmm-cli options globalmultiselect | grep "Option 1" | awk -F= '{print $1}'
+74a6ffda-708e-435a-86e3-40b67c4f981a
+Set:
+
+# set multiple values for multi-select field, comma-separated
+> ninjarmm-cli set globalmultiselect 333f541e-747e-4a1e-a2e2-a82c1c2f2008,74a6ffda-708e-435a-86e3-40b67c4f981a
+Get:
+
+# get values for multi-select field
+> ninjarmm-cli get globalmultiselect
+333f541e-747e-4a1e-a2e2-a82c1c2f2008, 74a6ffda-708e-435a-86e3-40b67c4f981a
+Phone Number
+Get:
+
+# get stored value
+ninjarmm-cli get typephone
++1234567890
+Set:
+
+# set correct values
+> ninjarmm-cli set typephone +77013273916
++77013273916
+
+> ninjarmm-cli set typephone 123456789012344567
+123456789012344567
+
+> ninjarmm-cli set typephone +123456789012344567
++123456789012344567
+
+# set wrong values
+> ninjarmm-cli set typephone 14953273916qwerty
+Error: Wrong value format / type ...
+
+> ninjarmm-cli set typephone 1234567890123445678 # too long
+Error: Wrong value format / type ...
+
+> ninjarmm-cli set typephone ++123456789012344567
+Error: Wrong value format / type ...
+Secure
+To prevent secure field values from being displayed in the script output for Windows devices, the script should contain @echo off and @echo on around the code that calls %NINJARMMCLI% set [secure field name] [secured value]. By default, Windows echoes all commands that users input or execute.
+
+To prevent secure field values from being displayed in the script output for Unix devices (macOS or Linux), the script should not contain set -x before operating. This omission prevents echoes of executed commands that contain secure values.
+
+Get: 
+
+# get secure field
+> ninjarmm-cli get globalsecure
+sampletext1
+Set:
+
+# set secure field
+> ninjarmm-cli set globalsecure sampletext2
+Text
+Get:
+
+# get text field
+> ninjarmm-cli get globaltext
+sampletext1
+Set:
+
+# set text field
+> ninjarmm-cli set globaltext sampletext2
+Time
+For the Time field, the set value must be in seconds or ISO format (hh:mm:ss).
+Get:
+
+# get value for time field
+> ninjarmm-cli get globaldatetime
+120
+Set:
+
+# set value to time field
+> ninjarmm-cli set globaldatetime 3600
+3600
+
+> ninjarmm-cli set testdatetime 00:00:00
+0
+URL
+The URL field is limited to 200 characters and must begin with https://.
+
+Get:
+
+# get URL field
+> ninjarmm-cli get url
+https://www.google.com
+Set:
+
+# set URL field
+> ninjarmm-cli set url https://www.ninjarmm.com
+Documentation Fields
+Get:
+
+# get templates list
+> ninjarmm-cli templates
+1=template 1
+2=template 2
+
+# get documents list by template ID
+> ninjarmm-cli documents 2
+16=template 2
+
+# get documents list by template name
+> ninjarmm-cli documents "template 2"
+16=template 2
+
+# get field value from document
+> ninjarmm-cli get "template 2" "template 2" fieldname
+This is the field value
+Set:
+
+# set attribute to the specified document/attribute by document name and template id/name (quotes required)
+> ninjarmm-cli org-set "template 2" "ExampleDoc" ExampleTextField "SampleText1"
+
+# set attribute to single document/attribute by template name (quotes required)
+> ninjarmm-cli org-set "template 2" ExampleTextField "SampleText1"
+
+# clear value of document by document name and template id/name (quotes required, represented as NULL)
+> ninjarmm-cli org-clear "template 2" "ExampleDoc" ExampleTextField
+
+# clear value of single document by template name (quotes required, represented as NULL)
+> ninjarmm-cli org-clear "template 2" ExampleTextField
+Options:
+
+# get list of the valid values for document attribute name by document name and template id/name (actual for drop-down and multi-select attributes)
+> ninjarmm-cli org-options "template 2" "ExampleDoc" ExampleTextField
+
+# get list of the valid values for a single document attribute name by template name (actual for drop-down and multi-select attributes)
+> ninjarmm-cli org-options "template 2" ExampleTextField
+Interacting with Custom Fields via PowerShell Commands or Custom Scripts
+The examples in this section show how to use PowerShell commands or scripts for specific types of custom fields. Use the links below to access the scripts you would like to review:
+
+Checkbox
+Date
+Date/Time
+Decimal
+Dropdown
+Email
+Integer
+IP Address
+Multi-Line
+Multi-Select
+Phone Number
+Secure
+Text
+Time
+URL
+Documentation Fields
+Checkbox
+For the Checkbox field, the set value must be either true (1) or false (0).
+Get:
+
+# get value for checkbox field
+> Ninja-Property-Get globalcheckbox
+0
+Set:
+
+# set a boolean value to the checkbox field
+> Ninja-Property-Set globalcheckbox 0
+0
+> Ninja-Property-Set globalcheckbox 1
+1
+> Ninja-Property-Set globalcheckbox true
+1
+> Ninja-Property-Set globalcheckbox false
+0
+Date
+For the Date field, the set value must be in seconds or ISO format (yyyy-mm-dd in UTC).
+Get:
+
+# get value for date field
+> Ninja-Property-Get globaldate
+456
+Set:
+
+# set value to date field
+> Ninja-Property-Set globaldate 1626875470000
+
+> Ninja-Property-Set testdate 2021-10-15
+1634256000
+Date/Time
+Get:
+
+# get value for date-time field
+> Ninja-Property-Get globaldatetime
+1626875470000
+Set:
+
+# set value to date-time field
+> Ninja-Property-Set globaldatetime 1626875470000
+1626875470000
+
+> Ninja-Property-Set testdatetime 2021-10-15T00:00:00
+1634256000
+Decimal
+Get:
+
+# get value for decimal field
+> Ninja-Property-Get globaldecimal
+123.456
+Set:
+
+# set value to decimal field
+> Ninja-Property-Set typedecimal 1
+1
+
+> Ninja-Property-Set typedecimal 1.23
+1.23
+
+> Ninja-Property-Set typedecimal 1.23
+1.23
+
+> Ninja-Property-Set typedecimal 1.2345678901234567890
+1.234567 # truncated to max precision, better not to use more precision to avoid data type conversion issues
+
+> Ninja-Property-Set typedecimal 1234567890.1234567890
+1234567890.123457
+Dropdown
+Options:
+
+# list options for the dropdown field
+> Ninja-Property-Options globaldropdown
+333f541e-747e-4a1e-a2e2-a82c1c2f2008=Option2
+74a6ffda-708e-435a-86e3-40b67c4f981a=Option1
+f1ba449c-fd34-49df-b878-af3877180d17=Option3
+Get option GUID by option name:
+
+# find the option GUID by the option name for the dropdown field
+> Ninja-Property-Get globaldropdown | grep "Option1" | awk -F= '{print $1}'
+74a6ffda-708e-435a-86e3-40b67c4f981a
+Get:
+
+# get value for dropdown field
+> Ninja-Property-Get globaldropdown
+74a6ffda-708e-435a-86e3-40b67c4f981a
+Set:
+
+# set value to the dropdown field
+> Ninja-Property-Set globaldropdown f1ba449c-fd34-49df-b878-af3877180d17
+Email
+Get:
+
+# get stored value
+> Ninja-Property-Get typeemail
+test@test.test
+Set:
+
+# correct values
+> Ninja-Property-Set typeemail test@test.test
+test@test.test
+
+> Ninja-Property-Set typeemail test@test123.test.othertest
+test@test123.test.othertest
+
+# set wrong values
+> Ninja-Property-Set typeemail test@test.test123
+Error: Wrong value format / type ...
+Integer
+For the Integer field, the set value must be an integer (a whole number with no decimals) within the range of -2147483648 to 2147483647.
+
+Get:
+
+# get value for integer field
+> Ninja-Property-Get globalinteger
+456
+Set:
+
+# set value to integer field
+> Ninja-Property-Set globalinteger 123
+IP Address
+For the IP field, the set value must be in IPv4 (Internet Protocol version 4) or IPv6 (Internet Protocol version 6) format.
+
+Get:
+
+# get stored value
+> Ninja-Property-Get typeipaddress
+192.168.1.100
+Set:
+
+# set correct values
+> Ninja-Property-Set typeipaddress 255.255.255.255
+255.255.255.255
+
+> Ninja-Property-Set typeipaddress 0.0.0.0
+0.0.0.0
+
+# set wrong values
+> Ninja-Property-Set typeipaddress 192.168.1.
+Error: Wrong value format / type ...
+
+> Ninja-Property-Set typeipaddress 255.255.255.256
+Error: Wrong value format / type ...
+
+> Ninja-Property-Set typeipaddress 0.-1.0.0
+Error: Wrong value format / type ...
+Multi-Line
+Due to CLI or Terminal restrictions, the text must be entered into the command prompt as a single line and is limited to 10,000 characters.
+
+Get:
+
+# get text field
+> Ninja-Property-Get globaltext
+sampletext1
+Set:
+
+# set text field
+>Ninja-Property-Set globaltext sampletext2
+Multi-Select
+Options:
+
+# list options for multi-select field
+> Ninja-Property-Options globalmultiselect
+333f541e-747e-4a1e-a2e2-a82c1c2f2008=Option2
+74a6ffda-708e-435a-86e3-40b67c4f981a=Option1
+f1ba449c-fd34-49df-b878-af3877180d17=Option3
+Get option GUID by option name:
+
+# find option GUID by the option name for the multi-select field
+> Ninja-Property-Options globalmultiselect | grep "Option 1" | awk -F= '{print $1}'
+74a6ffda-708e-435a-86e3-40ba67c4f981a
+Set:
+
+# set multiple values for multi-select field, comma-separated
+> Ninja-Property-Set globalmultiselect 333f541e-747e-4a1e-a2e2-a82c1c2f2008, 
+74a6ffda-708e-435a-86e3-40b67c4f981a
+Get:
+
+# get values for multi-select field
+> Ninja-Property-Get globalmultiselect
+333f541e-747e-4a1e-a1e2-a82c1c2f2008, 74a6ffda-708e-435a-86e3-40b67c4f981a
+Phone Number
+Get:
+
+# get stored value
+Ninja-Property-Get typephone
++1234567890
+Set:
+
+# set correct values
+> Ninja-Property-Set typephone +77013273916
++77013273916
+
+> Ninja-Property-Set typephone 123456789012344567
+123456789012344567
+
+> Ninja-Property-Set typephone 123456789012344567
+123456789012344567
+
+> Ninja-Property-Set typephone +123456789012344567
++123456789012344567
+
+# set wrong values
+> Ninja-Property-Set typephone 14953273916qwerty
+Error: Wrong value format / type ...
+
+> Ninja-Property-Set typephone 14953273916qwerty
+Error: Wrong value format / type ...
+
+> Ninja-Property-Set typephone 1234567890123445678 # too long
+Error: Wrong value format / type ...
+
+> Ninja-Property-Set typephone ++123456789012344567
+Error: Wrong value format / type ...
+Secure
+Get:
+
+# get secure field
+> Ninja-Property-Get globalsecure
+sampletext1
+Set:
+
+# set secure field
+>Ninja-Property-Set globalsecure sampletext2
+Text
+Get:
+
+# get text field
+> Ninja-Property-Get globaltext
+sampletext1
+Set:
+
+# set text field
+>Ninja-Property-Set globaltext sampletext2
+Time
+For the Time field, the set value must be in seconds or ISO format (hh:mm:ss).
+
+Get:
+
+# get value for time field
+> Ninja-Property-Get globaldatetime
+120
+Set:
+
+# set value to time field
+> Ninja-Property-Set globaldatetime 3600
+3600
+
+> Ninja-Property-Set testdatetime 00:00:00
+0
+URL
+The URL field is limited to 200 characters and must begin with "https://'".
+
+Get:
+
+# get URL field
+> Ninja-Property-Get url
+https://www.google.com
+Set:
+
+# set URL field
+>Ninja-Property-Set url https://www.google.com
+Documentation Fields
+Get:
+
+# get templates list
+> Ninja-Property-Docs-Templates
+1=template 1
+2=template 2
+
+# get documents list by template ID
+> Ninja-Property-Docs-Names 2
+16=template 2
+
+# get documents list by template name
+> Ninja-Property-Docs-Names "template 2"
+16=template 2
+
+# get field value from document
+> Ninja-Property-Docs-Get "template 2" "template 2" fieldname
+This is the field value
+Set:
+
+# set attribute to the specified document/attribute by document name and template id/name (quotes required)
+> Ninja-Property-Docs-Set 2 "ExampleDoc" ExampleTextField
+
+# set attribute to single document/attribute by template name (quotes required)
+> Ninja-Property-Docs-Set-Single "template 2" ExampleTextField "sampletext1"
+
+# clear value of document by document name and template id/name (quotes required, represented as NULL)
+> Ninja-Property-Docs-Clear "template 2" "ExampleDoc" ExampleTextField
+
+# clear value of single document by template name (quotes required, represented as NULL)
+> Ninja-Property-Docs-Clear-Single "template 2" ExampleTextField
+Options:
+
+# get list of the valid values for document attribute name by document name and template id/name (actual for drop-down and multi-select attributes)
+> Ninja-Property-Docs-Options "template 2" "ExampleDoc" ExampleTextField
+
+# get list of the valid values for a single document attribute name by template name (actual for drop-down and multi-select attributes)
+> Ninja-Property-Docs-Options-Single "template 2" ExampleTextField
