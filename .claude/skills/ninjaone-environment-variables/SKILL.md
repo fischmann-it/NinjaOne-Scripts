@@ -1,6 +1,6 @@
 ---
 name: ninjaone-environment-variables
-description: NinjaOne agent-provided environment variables for organization context, agent paths, and device identification. Use when scripts need to access organization name, location details, agent installation paths, node IDs, data directories, or agent version information. Variables work across Windows, macOS, and Linux platforms. Requires device reboot to refresh changed values.
+description: Use when code references $env:NINJA_* variables (NINJA_ORGANIZATION_NAME, NINJA_AGENT_NODE_ID, NINJA_DATA_PATH, etc.), or user asks about NinjaOne agent environment variables or organization context.
 ---
 
 # NinjaOne Environment Variables
@@ -64,13 +64,13 @@ function Get-NinjaEnvironmentInfo {
     <#
     .SYNOPSIS
         Retrieves NinjaOne agent environment information.
-    
+
     .DESCRIPTION
         Collects and returns NinjaOne agent environment variables as a structured object.
-    
+
     .OUTPUTS
         PSCustomObject with NinjaOne environment details
-    
+
     .EXAMPLE
         Get-NinjaEnvironmentInfo
     #>
@@ -83,7 +83,8 @@ function Get-NinjaEnvironmentInfo {
             AgentVersion    = $env:NINJA_AGENT_VERSION_INSTALLED
             PatcherVersion  = $env:NINJA_PATCHER_VERSION_INSTALLED
             DataPath        = $env:NINJA_DATA_PATH
-            AgentPassword   = $env:NINJA_AGENT_PASSWORD
+            # AgentPassword is intentionally omitted — never include in returned objects
+            # or logs. Use $env:NINJA_AGENT_PASSWORD directly only where needed for session key auth.
             MachineId       = $env:NINJA_AGENT_MACHINE_ID
             NodeId          = $env:NINJA_AGENT_NODE_ID
             Organization    = $env:NINJA_ORGANIZATION_NAME

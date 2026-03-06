@@ -1,6 +1,6 @@
 ---
 name: ninjaone-tags
-description: Device tagging operations via PowerShell cmdlets (Get-NinjaTag, Set-NinjaTag, Remove-NinjaTag) and CLI commands for classification and filtering. Use when scripts need to assign tags based on device roles, manage tag cleanup, implement conditional automation based on tags, or report tags to custom fields. Works only within automation scripts.
+description: Use when code uses Get-NinjaTag, Set-NinjaTag, Remove-NinjaTag, ninjarmm-cli tag-get/tag-set/tag-clear, or user asks about NinjaOne device tagging, tag-based automation, or tag management.
 ---
 
 # NinjaOne Tags
@@ -234,15 +234,15 @@ $tags = Get-NinjaTag
 
 if ($tags -contains "Maintenance Approved") {
     Write-Output "Device is approved for maintenance, proceeding..."
-    
+
     # Perform maintenance operations
-    
+
     # Remove maintenance tag after completion
     Remove-NinjaTag -Name "Maintenance Approved"
-    
+
     # Add completion tag
     Set-NinjaTag -Name "Maintenance Completed"
-    
+
     Write-Output "Maintenance completed successfully"
     exit 0
 } else {
@@ -265,26 +265,26 @@ param()
 try {
     # Detect server role
     $windowsFeatures = Get-WindowsFeature | Where-Object { $_.Installed }
-    
+
     # Tag as web server
     if ($windowsFeatures.Name -contains "Web-Server") {
         Set-NinjaTag -Name "Web Server"
         Write-Output "Tagged as Web Server"
     }
-    
+
     # Tag as database server
     if (Get-Service -Name 'MSSQLSERVER' -ErrorAction SilentlyContinue) {
         Set-NinjaTag -Name "Database Server"
         Write-Output "Tagged as Database Server"
     }
-    
+
     # Tag by organization
     $orgName = $env:NINJA_ORGANIZATION_NAME
     if ($orgName -like "*Production*") {
         Set-NinjaTag -Name "Production"
         Write-Output "Tagged as Production based on organization"
     }
-    
+
     exit 0
 } catch {
     Write-Error "Tagging failed: $_"
@@ -312,7 +312,7 @@ $tagMapping = @{
 
 try {
     $currentTags = Get-NinjaTag
-    
+
     # Remove deprecated tags
     foreach ($tag in $currentTags) {
         if ($tag -in $deprecatedTags) {
@@ -320,7 +320,7 @@ try {
             Write-Output "Removed deprecated tag: $tag"
         }
     }
-    
+
     # Standardize tag names
     foreach ($tag in $currentTags) {
         if ($tagMapping.ContainsKey($tag)) {
@@ -330,7 +330,7 @@ try {
             Write-Output "Replaced '$tag' with '$newTag'"
         }
     }
-    
+
     exit 0
 } catch {
     Write-Error "Tag cleanup failed: $_"
@@ -351,16 +351,16 @@ param()
 
 try {
     $tags = Get-NinjaTag
-    
+
     if ($tags.Count -eq 0) {
         $tagReport = "No tags assigned"
     } else {
         $tagReport = $tags -join ", "
     }
-    
+
     # Store in custom field for dashboard visibility
-    Ninja-Property-Set deviceTags $tagReport
-    
+    Set-NinjaProperty -Name "deviceTags" -Value $tagReport -Type "MultiLine"
+
     Write-Output "Tag report: $tagReport"
     exit 0
 } catch {

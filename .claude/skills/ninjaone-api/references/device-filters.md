@@ -16,7 +16,7 @@ GET /devices?df=key1=value1,key2=value2
 
 Filter devices by organization.
 
-**Type:** Integer  
+**Type:** Integer
 **Example:** `df=org=123`
 
 ```powershell
@@ -28,7 +28,7 @@ $devices = Invoke-RestMethod -Uri "$baseUrl/devices?df=org=123" -Headers $header
 
 Filter by device type/class.
 
-**Type:** String (enum)  
+**Type:** String (enum)
 **Valid Values:**
 - `WINDOWS_WORKSTATION` - Windows desktop/laptop
 - `WINDOWS_SERVER` - Windows Server
@@ -54,7 +54,7 @@ $macs = Invoke-RestMethod -Uri "$baseUrl/devices?df=class=MAC" -Headers $headers
 
 Filter by device online/offline status.
 
-**Type:** String (enum)  
+**Type:** String (enum)
 **Valid Values:**
 - `ONLINE` - Device is currently online
 - `OFFLINE` - Device is offline
@@ -72,7 +72,7 @@ $offline = Invoke-RestMethod -Uri "$baseUrl/devices?df=status=OFFLINE" -Headers 
 
 Filter by assigned node role.
 
-**Type:** Integer  
+**Type:** Integer
 **Example:** `df=role=5`
 
 ```powershell
@@ -84,7 +84,7 @@ $roleDevices = Invoke-RestMethod -Uri "$baseUrl/devices?df=role=5" -Headers $hea
 
 Filter by location.
 
-**Type:** Integer  
+**Type:** Integer
 **Example:** `df=location=10`
 
 ```powershell
@@ -96,7 +96,7 @@ $locationDevices = Invoke-RestMethod -Uri "$baseUrl/devices?df=location=10" -Hea
 
 Filter devices modified after a specific Unix timestamp.
 
-**Type:** Integer (Unix timestamp)  
+**Type:** Integer (Unix timestamp)
 **Example:** `df=after=1640000000`
 
 ```powershell
@@ -113,7 +113,7 @@ $devices = Invoke-RestMethod -Uri "$baseUrl/devices?df=after=$timestamp" -Header
 
 Filter devices modified before a specific Unix timestamp.
 
-**Type:** Integer (Unix timestamp)  
+**Type:** Integer (Unix timestamp)
 **Example:** `df=before=1640100000`
 
 ```powershell
@@ -131,7 +131,7 @@ $range = Invoke-RestMethod -Uri "$baseUrl/devices?df=after=$start,before=$end" -
 
 Search in device display name.
 
-**Type:** String  
+**Type:** String
 **Example:** `df=search=srv`
 
 ```powershell
@@ -182,9 +182,9 @@ function New-DeviceFilter {
         [datetime]$Before,
         [string]$Search
     )
-    
+
     $parts = @()
-    
+
     if ($PSBoundParameters.ContainsKey('OrgId')) {
         $parts += "org=$OrgId"
     }
@@ -212,7 +212,7 @@ function New-DeviceFilter {
         $encoded = [System.Web.HttpUtility]::UrlEncode($Search)
         $parts += "search=$encoded"
     }
-    
+
     return $parts -join ','
 }
 
@@ -226,24 +226,24 @@ $devices = Invoke-RestMethod -Uri "$baseUrl/devices?df=$filter" -Headers $header
 ```powershell
 function ConvertTo-DeviceFilter {
     param([hashtable]$Filters)
-    
+
     $parts = $Filters.GetEnumerator() | ForEach-Object {
         $key = $_.Key
         $value = $_.Value
-        
+
         # Handle datetime conversion
         if ($value -is [datetime]) {
             $value = [Math]::Floor($value.ToUniversalTime().Subtract([datetime]'1970-01-01').TotalSeconds)
         }
-        
+
         # Handle URL encoding for strings
         if ($value -is [string] -and $key -eq 'search') {
             $value = [System.Web.HttpUtility]::UrlEncode($value)
         }
-        
+
         "$key=$value"
     }
-    
+
     return $parts -join ','
 }
 

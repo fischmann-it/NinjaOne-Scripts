@@ -1,6 +1,6 @@
 ---
 name: ninjaone-custom-fields
-description: Using the NinjaOne PowerShell module (Get-NinjaProperty, Set-NinjaProperty) to access and manage custom fields with automatic type conversion. Use when scripts need to read or write device custom fields, documentation fields, dropdown values (with friendly names not GUIDs), checkboxes, dates, secure fields, multi-select options, or WYSIWYG reports. Handles 20+ field types including attachments, device/organization dropdowns, and documentation templates.
+description: Use when code uses Get-NinjaProperty or Set-NinjaProperty with -Type parameter, references NinjaOne custom field types (Dropdown, MultiSelect, WYSIWYG, Secure, etc.), or user asks about reading/writing NinjaOne custom fields with type conversion.
 ---
 
 # NinjaOne Custom Fields
@@ -384,6 +384,8 @@ Set-NinjaProperty -Name "Report" -Value $htmlContent -Type "WYSIWYG"
 ```
 
 ## Documentation Fields
+
+> **Preferred approach:** Use `Get-NinjaProperty`/`Set-NinjaProperty` with `-DocumentName` for reading and writing documentation fields — they handle type conversion automatically (see examples above). The legacy `Ninja-Property-Docs-*` commands shown below are retained for compatibility with older scripts or environments that cannot use the PowerShell module.
 
 ```powershell
 # List all templates

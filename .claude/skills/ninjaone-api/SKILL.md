@@ -1,6 +1,6 @@
 ---
 name: ninjaone-api
-description: Using the NinjaOne REST API v2 for automation, integration, and data retrieval via HTTP requests. Use when scripts need to interact with NinjaOne programmatically, manage devices/organizations/tickets, perform bulk operations, create tag definitions, retrieve monitoring data, synchronize with external systems (PSA, ITSM), or build custom dashboards. Covers OAuth2 authentication, pagination, filtering (device filters like df, class, org, status), rate limiting, and error handling patterns.
+description: Use when code uses Invoke-RestMethod with NinjaOne API URLs, references ninjarmm.com/api/v2, implements OAuth2 for NinjaOne, or user asks about NinjaOne REST API, device filters, pagination, or bulk API operations.
 ---
 
 # NinjaOne REST API v2
@@ -81,10 +81,10 @@ do {
     if ($cursor) {
         $url += "&after=$cursor"
     }
-    
+
     $response = Invoke-RestMethod -Uri $url -Headers $headers
     $allDevices += $response
-    
+
     # Extract cursor from next page link
     if ($response.PSObject.Properties['next']) {
         $cursor = [System.Web.HttpUtility]::ParseQueryString(
@@ -197,7 +197,7 @@ try {
 } catch {
     $statusCode = $_.Exception.Response.StatusCode.value__
     $errorBody = $_.ErrorDetails.Message | ConvertFrom-Json
-    
+
     switch ($statusCode) {
         400 { Write-Error "Bad Request: $($errorBody.message)" }
         401 { Write-Error "Unauthorized: Token may be expired" }
@@ -268,12 +268,12 @@ Invoke-RestMethod -Uri "$baseUrl/devices/approval/APPROVE" -Headers $headers -Me
 $fields = Invoke-RestMethod -Uri "$baseUrl/device/$deviceId/custom-fields" -Headers $headers
 
 # Update custom field value
-$update = @{
+$update = @(
     @{
-        name = "FieldName"
+        name  = "FieldName"
         value = "New Value"
     }
-}
+)
 Invoke-RestMethod -Uri "$baseUrl/device/$deviceId/custom-fields" -Headers $headers -Method Patch -Body ($update | ConvertTo-Json) -ContentType "application/json"
 
 # Get organization custom fields
@@ -363,7 +363,7 @@ function Invoke-NinjaApiWithRetry {
         [object]$Body,
         [int]$MaxRetries = 3
     )
-    
+
     $attempt = 0
     do {
         try {
@@ -376,12 +376,12 @@ function Invoke-NinjaApiWithRetry {
                 $params.Body = ($Body | ConvertTo-Json -Depth 10)
                 $params.ContentType = "application/json"
             }
-            
+
             return Invoke-RestMethod @params
         } catch {
             $attempt++
             $statusCode = $_.Exception.Response.StatusCode.value__
-            
+
             if ($statusCode -eq 429 -and $attempt -lt $MaxRetries) {
                 $retryAfter = $_.Exception.Response.Headers['Retry-After']
                 if ($retryAfter) {
@@ -417,11 +417,11 @@ $secret = Get-Secret -Name "NinjaClientSecret" -Vault "MyVault"
 # Validate response structure
 function Assert-NinjaApiResponse {
     param($Response, [string]$ExpectedProperty)
-    
+
     if (-not $Response) {
         throw "Empty response from API"
     }
-    
+
     if ($ExpectedProperty -and -not $Response.PSObject.Properties[$ExpectedProperty]) {
         throw "Expected property '$ExpectedProperty' not found in response"
     }
@@ -446,14 +446,14 @@ foreach ($device in $devices) {
             value = (Get-Date).ToString("yyyy-MM-dd")
         }
     )
-    
+
     try {
         Invoke-RestMethod -Uri "$baseUrl/device/$($device.id)/custom-fields" `
             -Headers $headers `
             -Method Patch `
             -Body ($update | ConvertTo-Json) `
             -ContentType "application/json"
-        
+
         Write-Verbose "Updated device: $($device.displayName)"
     } catch {
         Write-Warning "Failed to update device $($device.id): $_"
@@ -487,7 +487,7 @@ $alerts = Invoke-RestMethod -Uri "$baseUrl/alerts?severity=CRITICAL" -Headers $h
 foreach ($alert in $alerts) {
     # Check if ticket already exists for this alert
     $existingTicket = $alert.psaTicketId
-    
+
     if (-not $existingTicket) {
         $ticket = @{
             clientId = $alert.device.organizationId
@@ -502,7 +502,7 @@ foreach ($alert in $alerts) {
             severity = "CRITICAL"
             nodeId = $alert.deviceId
         }
-        
+
         Invoke-RestMethod -Uri "$baseUrl/ticketing/ticket" `
             -Headers $headers `
             -Method Post `
@@ -524,10 +524,17 @@ foreach ($alert in $alerts) {
 | Empty Response | Verify filters and pagination parameters |
 | Parsing Error | Ensure `-ContentType "application/json"` is set for POST/PATCH/PUT |
 
+## Common Mistakes
+
+1. **Missing `ContentType` on POST/PATCH/PUT** - `Invoke-RestMethod` defaults to form-encoded bodies. Always include `-ContentType "application/json"` when sending JSON. Without it, the API returns 400 or silently ignores the body.
+2. **Wrong body format for custom fields** - The custom fields PATCH endpoint expects an **array** of objects, not a bare hashtable. Use `@( @{ name = "..."; value = "..." } )` not `@{ @{ ... } }`. A hashtable cannot contain an unlabelled hashtable — `ConvertTo-Json` on the latter produces invalid JSON.
+3. **Forgetting `-Depth` on `ConvertTo-Json`** - The default depth is 2. Nested objects (e.g., ticket `description` with `htmlBody`) are silently truncated to `"System.Collections.Hashtable"`. Use `-Depth 10` for complex bodies.
+4. **Using string IDs where integers are required** - Filter values like `org=`, `location=`, and `role=` expect integers. Passing a string-typed variable (e.g., `"$orgId"`) may work in some contexts but fail in others — cast explicitly: `[int]$orgId`.
+5. **Ignoring cursor-based pagination** - Endpoints like `/devices` return up to 100 results by default. Without pagination logic, bulk operations silently miss devices. Always implement the `after` cursor loop for any endpoint that returns lists.
+
 ## References
 
 - [NinjaOne API Documentation](https://app.ninjarmm.com/apidocs-v2/core-resources)
-- [OpenAPI Specification](./references/api-specification.md)
 - [Device Filter Reference](./references/device-filters.md)
 - [Advanced Examples](./references/api-examples.md)
 - Related Skills:

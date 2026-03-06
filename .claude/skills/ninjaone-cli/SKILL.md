@@ -1,6 +1,6 @@
 ---
 name: ninjaone-cli
-description: Using the ninjarmm-cli executable and legacy PowerShell commands for custom field management via command-line interface. Use when scripts need to interact with NinjaOne custom fields from Batch/Shell scripts, handle documentation templates, work with dropdown GUIDs directly, manage fields in non-PowerShell environments, or use piped data for large content. Covers all field types including secure, WYSIWYG, and documentation fields with examples for Windows, Linux, and macOS.
+description: Use when code uses ninjarmm-cli, %NINJARMMCLI%, Ninja-Property-Get, Ninja-Property-Set, Get-NinjaProperty, Set-NinjaProperty, or user asks about NinjaOne CLI commands, legacy PowerShell commands, or documentation template access.
 ---
 
 # NinjaOne CLI Tool
@@ -87,11 +87,11 @@ Get-NinjaProperty [-Name] <String[]> [[-Type] <String>] [[-DocumentName] <String
 
 **Examples:**
 ```powershell
-# WITHOUT type specified - returns GUID
+# WITHOUT type specified - Dropdown fields will return a GUID
 Get-NinjaProperty -Name "Environment"
 # Output: 74a6ffda-708e-435a-86e3-40b67c4f981a
 
-# WITH type specified - returns friendly name
+# WITH type specified - Dropdown fields will return a friendly name, this is preferred.
 Get-NinjaProperty -Name "Environment" -Type "Dropdown"
 # Output: Production
 
@@ -531,7 +531,7 @@ Ninja-Property-Set globalsecure sampletext2
 ```
 
 **Security Best Practices:**
-```
+
 For Windows (Batch):
 ```batch
 @echo off

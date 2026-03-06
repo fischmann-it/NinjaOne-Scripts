@@ -1,6 +1,6 @@
 ---
 name: ninjaone-script-variables
-description: Handling NinjaOne script variables and preset parameters with type conversion and validation. Use when creating NinjaOne scripts that accept runtime parameters, need to validate user input, convert string variables to proper types (Boolean, Integer, DateTime, IPAddress), or handle mandatory/optional script configuration. Covers environment variable conversion, type casting, validation patterns, and helper functions.
+description: Use when creating NinjaOne automation scripts that accept runtime parameters, converting string environment variables to typed values, or user asks about NinjaOne script variables, preset parameters, or variable type conversion.
 ---
 
 # NinjaOne Script Variables
@@ -56,7 +56,7 @@ When creating script variables in the NinjaOne script editor:
 | **Make variable mandatory** | Toggle to require value when script runs | All except Checkbox |
 | **Name** | Descriptive variable name displayed in UI | All |
 | **Calculated name** | Auto-populated variable name used in script | All |
-| **Description** | Optional tooltip (ℹ️) shown when hovering over variable | All |
+| **Description** | Optional tooltip shown when hovering over variable | All |
 | **Set default value** | Pre-defined value used if not provided at runtime | All |
 | **Option value** | List of selectable options for dropdown | Dropdown only |
 
@@ -193,10 +193,10 @@ function ConvertTo-TypedValue {
     <#
     .SYNOPSIS
         Converts NinjaOne script variable (string) to specified type with validation.
-    
+
     .EXAMPLE
         $port = ConvertTo-TypedValue -Value $env:Port -Type 'Int32' -DefaultValue 443 -Min 1 -Max 65535
-    
+
     .EXAMPLE
         $enabled = ConvertTo-TypedValue -Value $env:EnableFeature -Type 'Boolean' -DefaultValue $false
     #>
@@ -270,7 +270,7 @@ When running a script with variables, NinjaOne renders an interactive form:
 
 - **Mandatory fields** are marked with an asterisk (*)
 - **Empty mandatory fields** turn red when attempting to run the script
-- **Description tooltips** appear as info icons (ℹ️) next to variable names
+- **Description tooltips** appear as info icons next to variable names
 - **Default values** are pre-populated in form fields
 - **Dropdown options** appear as selectable lists
 
@@ -293,7 +293,7 @@ NinjaOne supports passing parameters directly to scripts at runtime using preset
     NinjaOne Preset Parameters:
     - Parameter 1: Username (supports spaces when quoted)
     - Parameter 2: Password
-    
+
     Example preset parameter strings:
     - "John Doe" SecurePass123
     - Alice P@ssw0rd!
@@ -325,6 +325,14 @@ net user "$Username" "$Password" /add
 | **Flexibility** | Ad-hoc values | Structured inputs with UI validation |
 | **Use Case** | Quick actions, testing | Standardized operations, policies |
 | **Validation** | Manual in script | Platform UI validation |
+
+## Common Mistakes
+
+1. **Not handling empty strings for non-mandatory variables** - Non-mandatory variables arrive as empty strings `""` when not filled in, not as `$null`. Direct type casts like `[int]$env:Port` throw an exception on an empty string. Always guard with `[string]::IsNullOrWhiteSpace($env:Port)` before converting.
+2. **Checkbox comparison against the wrong value** - Checkbox variables send `"true"` or `"false"` as strings, not PowerShell booleans. `if ($env:EnableFeature)` is always `$true` for a non-empty string. Use `$env:EnableFeature -eq 'true'` for correct boolean evaluation.
+3. **Special characters in variable names** - Characters like `&`, `|`, `;`, `$`, and backtick cannot be used in variable names or values. Scripts with these characters fail at runtime without a clear error.
+4. **Naming conflicts with system environment variables** - If a script variable shares a name with an existing system environment variable (e.g., `PATH`, `TEMP`), the script will fail or use the wrong value. Prefix custom variable names (e.g., `NR_Port`) to avoid collisions.
+5. **Assuming DateTime locale** - Date/Time variables use ISO 8601 with timezone (`YYYY-MM-ddTHH:MM:SS.SSSZ`). Parsing with `[DateTime]::Parse($value)` without `DateTimeStyles.RoundtripKind` loses timezone info and can shift the time. Use `[DateTime]::Parse($value, $null, [System.Globalization.DateTimeStyles]::RoundtripKind)`.
 
 ## Best Practices
 

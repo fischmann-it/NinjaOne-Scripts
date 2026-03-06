@@ -1,6 +1,6 @@
 ---
 name: ninjaone-wysiwyg
-description: HTML formatting, inline styling, Font Awesome 6 icons, Charts.css data visualization, and optional Bootstrap 5 grid for NinjaOne WYSIWYG custom fields. Use when creating visual reports, formatted documentation, status dashboards, data charts, or styled content in custom fields. Supports cards, tables, info cards, stat cards, buttons, tags, and responsive layouts with allowlist-based HTML/CSS security.
+description: Use when code sets WYSIWYG custom fields, builds HTML reports for NinjaOne, uses NinjaOne CSS classes (card, info-card, stat-card), Charts.css in NinjaOne context, or user asks about formatting NinjaOne WYSIWYG fields.
 ---
 
 # NinjaOne WYSIWYG Fields
@@ -253,7 +253,7 @@ $columnChart = @"
     <tr><td style="--size: 0.75"><span class="data">75%</span></td></tr>
   </tbody>
 </table>
-"@"
+"@
 ```
 
 ### Bar Chart
@@ -266,7 +266,7 @@ $barChart = @"
     <tr><td style="--size: 0.6"><span class="data">60%</span></td></tr>
   </tbody>
 </table>
-"@"
+"@
 ```
 
 ### Pie Chart
@@ -281,7 +281,7 @@ $pieChart = @"
     </tbody>
   </table>
 </div>
-"@"
+"@
 ```
 
 ### Line Chart
@@ -331,7 +331,7 @@ $areaChart = @"
     </tr>
   </tbody>
 </table>
-"@"
+"@
 ```
 
 ### Chart Modifiers
@@ -359,11 +359,11 @@ Bootstrap's grid system is available for complex responsive layouts when needed.
 | Breakpoint | Size | Class Prefix |
 |------------|------|--------------|
 | Extra small (xs) | <576px | `.col-` |
-| Small (sm) | ≥576px | `.col-sm-` |
-| Medium (md) | ≥768px | `.col-md-` |
-| Large (lg) | ≥992px | `.col-lg-` |
-| Extra large (xl) | ≥1200px | `.col-xl-` |
-| Extra extra large (xxl) | ≥1400px | `.col-xxl-` |
+| Small (sm) | >=576px | `.col-sm-` |
+| Medium (md) | >=768px | `.col-md-` |
+| Large (lg) | >=992px | `.col-lg-` |
+| Extra large (xl) | >=1200px | `.col-xl-` |
+| Extra extra large (xxl) | >=1400px | `.col-xxl-` |
 
 ### Basic Grid Examples
 
@@ -377,7 +377,7 @@ $html = @"
     <div class="col">Column 3</div>
   </div>
 </div>
-"@"
+"@
 
 # Responsive: stacked mobile, horizontal tablet+
 $html = @"
@@ -387,7 +387,7 @@ $html = @"
     <div class="col-sm-4">Sidebar</div>
   </div>
 </div>
-"@"
+"@
 
 # Mixed breakpoints
 $html = @"
@@ -395,7 +395,7 @@ $html = @"
   <div class="col-6 col-md-4">Responsive column</div>
   <div class="col-6 col-md-8">Another column</div>
 </div>
-"@"
+"@
 ```
 
 ### Row Columns
@@ -413,7 +413,7 @@ $html = @"
     <div class="col">Column</div>
   </div>
 </div>
-"@"
+"@
 
 # Responsive columns: 1 on mobile, 2 on small, 4 on medium+
 $html = @"
@@ -423,7 +423,7 @@ $html = @"
   <div class="col">Column</div>
   <div class="col">Column</div>
 </div>
-"@"
+"@
 
 # Auto-width columns
 $html = @"
@@ -432,7 +432,7 @@ $html = @"
   <div class="col">Column</div>
   <div class="col">Column</div>
 </div>
-"@"
+"@
 ```
 
 ### Nesting
@@ -449,23 +449,23 @@ $html = @"
     </div>
   </div>
 </div>
-"@"
+"@
 ```
 
 ### Gutters
 
 ```powershell
 # No gutters
-$html = @"<div class="row g-0"><div class="col">No spacing</div></div>"@"
+$html = @"<div class="row g-0"><div class="col">No spacing</div></div>"@
 
 # Custom gutters
-$html = @"<div class="row g-3"><div class="col">3 spacing</div></div>"@"
+$html = @"<div class="row g-3"><div class="col">3 spacing</div></div>"@
 
 # Horizontal only
-$html = @"<div class="row gx-5"><div class="col">Horizontal spacing</div></div>"@"
+$html = @"<div class="row gx-5"><div class="col">Horizontal spacing</div></div>"@
 
 # Vertical only
-$html = @"<div class="row gy-3"><div class="col">Vertical spacing</div></div>"@"
+$html = @"<div class="row gy-3"><div class="col">Vertical spacing</div></div>"@
 ```
 
 ### Additional Grid Utilities
@@ -493,7 +493,7 @@ $html = @"
 <div class="card">
   <div class="card-body">Large content here...</div>
 </div>
-"@"
+"@
 
 # Pipe to NinjaOne field
 $html | Ninja-Property-Set-Piped "FieldName"
@@ -518,7 +518,7 @@ $memoryPercent = [math]::Round((($os.TotalVisibleMemorySize - $os.FreePhysicalMe
 # Build HTML using simple inline styling
 $html = @"
 <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-  
+
   <!-- Overview Card -->
   <div class="card flex-grow-1" style="min-width: 300px;">
     <div class="card-title-box">
@@ -530,7 +530,7 @@ $html = @"
       <p><b>Uptime:</b> $([math]::Round((New-TimeSpan -Start $os.LastBootUpTime).TotalDays, 2)) days</p>
     </div>
   </div>
-  
+
   <!-- Resource Usage -->
   <div class="card flex-grow-1" style="min-width: 300px;">
     <div class="card-title-box">
@@ -545,7 +545,7 @@ $html = @"
       </table>
     </div>
   </div>
-  
+
 </div>
 "@
 
@@ -569,3 +569,11 @@ exit 0
 10. **Semantic HTML** - Use appropriate heading levels and semantic elements
 11. **Accessibility** - Include meaningful text for icons and links
 12. **Grid When Needed** - Use Bootstrap grid for complex responsive requirements
+
+## Common Mistakes
+
+1. **Broken here-string delimiters** - The closing `"@` must be at the start of a line with no leading spaces or trailing characters. `"@"` is incorrect and causes a parse error.
+2. **Unsupported HTML elements** - Elements like `<img>`, `<script>`, `<style>`, `<iframe>` are silently stripped by NinjaOne's sanitizer. Only elements from the allowlist render.
+3. **Unsupported CSS properties** - Properties like `flex-wrap`, `gap`, `overflow`, `position` are not in the allowlist and will be stripped silently — use supported alternatives like `display: flex` with `justify-content`.
+4. **Inline styles on `<code>` and `<pre>`** - These elements do not support NinjaOne CSS classes; use `<span>` or `<div>` wrappers instead.
+5. **Exceeding 10,000 characters without piping** - Fields over 10,000 characters auto-collapse. For large reports, use `Ninja-Property-Set-Piped` via CLI to avoid truncation issues.
