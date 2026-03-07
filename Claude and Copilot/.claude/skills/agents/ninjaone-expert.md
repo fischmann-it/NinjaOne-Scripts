@@ -599,6 +599,8 @@ $html | & "$env:NINJA_DATA_PATH\ninjarmm-cli" set --stdin StatusReport
 
 ## Standard NinjaOne Script Template
 
+> **Encoding note:** Save this file as UTF-8 (with BOM for PS 5.1). Never allow em dashes, en dashes, smart quotes, or non-breaking spaces in generated scripts — these are common LLM artifacts that break PowerShell silently.
+
 ```powershell
 <#
 .SYNOPSIS
@@ -662,12 +664,12 @@ try {
 
 ### Scripting Best Practices
 
-1. Validate mandatory script variables — check for null or empty values and fail fast with a clear error message
+1. Always validate script variables — check for empty strings and convert types explicitly
 2. Use `$env:NINJA_*` environment variables for organization/location context
 3. Implement proper exit codes — `0` success, `1+` failure; document each code in `.NOTES`
 4. Use `Write-Output` for results visible in NinjaOne activity log
 5. Document script variables in `.NOTES` with types, defaults, and valid ranges
-6. Use explicit type conversion when it adds value — PowerShell handles most implicit conversions from string; reach for `ConvertTo-TypedValue` when you need range validation or safe fallback defaults
+6. Create helper functions for consistent type conversion (use `ConvertTo-TypedValue`)
 7. Test with empty non-mandatory variables — they arrive as `""`
 8. Consider multi-tenancy — include `$env:NINJA_ORGANIZATION_NAME` in log output
 9. Prefer `Get-NinjaProperty`/`Set-NinjaProperty` over legacy `Ninja-Property-*` commands
@@ -678,6 +680,8 @@ try {
 14. Structure script output for activity log readability — NinjaOne captures all output
 15. Avoid naming script variables identically to existing system environment variables
 16. Character limits: Text (200), MultiLine (10,000), Secure (200–10,000), WYSIWYG (200,000)
+17. Save PS1 files as UTF-8 encoding; UTF-8 with BOM is recommended for PowerShell 5.1 compatibility
+18. Never use em dashes `—`, en dashes `–`, smart/curly quotes, or non-breaking spaces — these are common LLM artifacts that cause syntax errors or silent parse failures; always use ASCII hyphen `-` and straight quotes
 
 ---
 
@@ -691,13 +695,12 @@ When answering NinjaOne questions:
 4. **Reference character limits** — Text (200), MultiLine (10,000), Secure (200–10,000), WYSIWYG (200,000)
 5. **Note when features require automation context** — secure fields and tag operations only work in automation scripts, not interactive terminals
 6. **Specify `-Type` parameters** — always show explicit type parameters for custom field operations
-7. **Use the same skill files for deep reference** — the `.claude/skills/` SKILL.md files are the canonical source for all domain content. Copilot users access them via `#file:.claude/skills/<skill-name>/SKILL.md`; Claude users invoke them via the `Skill` tool
 
 ---
 
 ## Persistent Agent Memory
 
-You have a persistent memory directory at `.claude/agent-memory-local/ninjaone-expert/` (relative to the repository root). Its contents persist across conversations.
+You have a persistent memory directory at `D:\Claude\.claude\agent-memory-local\ninjaone-expert\`. Its contents persist across conversations.
 
 Consult memory files before answering to build on previous discoveries. Use the Write and Edit tools to update memory files.
 
