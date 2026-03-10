@@ -102,9 +102,13 @@ function Get-EnvWithDefault {
     )
     $raw = [System.Environment]::GetEnvironmentVariable($Name)
     if (-not [string]::IsNullOrEmpty($raw)) {
-        if ($Type -eq [bool]) { return 'true', '1', 'yes' -icontains $raw }
+        if ($Type -eq [bool]) {
+            return 'true', '1', 'yes' -icontains $raw 
+        }
         $result = $raw -as $Type
-        if ($null -ne $result) { return $result }
+        if ($null -ne $result) {
+            return $result 
+        }
     }
     return $Default
 }
@@ -203,12 +207,20 @@ function New-HtmlTable {
         [string]$EmptyMessage = ''
     )
     $heading = if ($Title) {
-        $iconHtml = if ($Icon) { "<i class='$Icon'></i>&nbsp;&nbsp;" } else { '' }
+        $iconHtml = if ($Icon) {
+            "<i class='$Icon'></i>&nbsp;&nbsp;" 
+        } else {
+            '' 
+        }
         "<h3>$iconHtml$Title</h3>"
-    } else { '' }
+    } else {
+        '' 
+    }
 
     if (-not $Rows) {
-        if ($EmptyMessage) { return "$heading<p class='text-success'>$EmptyMessage</p>" }
+        if ($EmptyMessage) {
+            return "$heading<p class='text-success'>$EmptyMessage</p>" 
+        }
         return ''
     }
     $thead = ($Headers | ForEach-Object { "<th>$_</th>" }) -join ''
@@ -235,10 +247,42 @@ function New-HtmlInfoCard {
         [Parameter(Mandatory)]
         [string]$Description
     )
-    # NOTE: $Title and $Description are injected directly into HTML. Callers MUST pre-encode
-    # any user-controlled data (e.g. VM names) with ConvertTo-HtmlEncoded before passing here.
-    $icon = if ($Level -eq 'error') { 'fa-solid fa-circle-exclamation' } else { 'fa-solid fa-triangle-exclamation' }
-    return "<div class='info-card $Level'><i class='info-icon $icon'></i><div class='info-text'><div class='info-title'>$Title</div><div class='info-description'>$Description</div></div></div>"
+    $icon = if ($Level -eq 'error') {
+        'fa-solid fa-circle-exclamation'
+    } else {
+        'fa-solid fa-triangle-exclamation'
+    }
+
+    # Style configuration for each level with dark mode support
+    $styles = @{
+        'error'   = @{
+            bgColor     = '#f2dede'
+            borderColor = '#d9534f'
+            textColor   = '#a94442'
+            iconColor   = '#d9534f'
+        }
+        'warning' = @{
+            bgColor     = '#fcf8e3'
+            borderColor = '#f0ad4e'
+            textColor   = '#8a6d3b'
+            iconColor   = '#f0ad4e'
+        }
+        'info'    = @{
+            bgColor     = '#d9edf7'
+            borderColor = '#5bc0de'
+            textColor   = '#31708f'
+            iconColor   = '#5bc0de'
+        }
+    }
+
+    $style = $styles[$Level]
+    $cardStyle = "background-color:$($style.bgColor);border:1px solid $($style.borderColor);border-radius:4px;padding:12px;display:flex;align-items:flex-start;gap:12px;"
+    $iconStyle = "color:$($style.iconColor);font-size:20px;flex-shrink:0;margin-top:2px;"
+    $textStyle = 'flex:1;min-width:0;'
+    $titleStyle = "font-weight:600;margin-bottom:4px;color:$($style.textColor);"
+    $descStyle = "font-size:14px;line-height:1.4;color:$($style.textColor);"
+
+    return "<div class='info-card $Level' style='$cardStyle'><i class='info-icon $icon' style='$iconStyle'></i><div class='info-text' style='$textStyle'><div class='info-title' style='$titleStyle'>$Title</div><div class='info-description' style='$descStyle'>$Description</div></div></div>"
 }
 
 function Get-AlertColor {
@@ -249,9 +293,15 @@ function Get-AlertColor {
         [string]$Level
     )
     switch ($Level) {
-        'danger' { return '#d9534f' }
-        'warning' { return '#f0ad4e' }
-        default { return '#5cb85c' }
+        'danger' {
+            return '#d9534f' 
+        }
+        'warning' {
+            return '#f0ad4e' 
+        }
+        default {
+            return '#5cb85c' 
+        }
     }
 }
 
@@ -262,8 +312,12 @@ function Get-ProgressBarColor {
         [int]$WarnPct = 70,
         [int]$CritPct = 90
     )
-    if ($Percent -ge $CritPct) { return '#d9534f' }
-    if ($Percent -ge $WarnPct) { return '#f0ad4e' }
+    if ($Percent -ge $CritPct) {
+        return '#d9534f' 
+    }
+    if ($Percent -ge $WarnPct) {
+        return '#f0ad4e' 
+    }
     return '#5cb85c'
 }
 
@@ -315,7 +369,11 @@ function New-HyperVWarningsSectionHtml {
     }
 
     foreach ($r in @($ReplicationInfo | Where-Object { $_.Health -in 'Warning', 'Critical' })) {
-        $level = if ($r.Health -eq 'Critical') { 'error' } else { 'warning' }
+        $level = if ($r.Health -eq 'Critical') {
+            'error' 
+        } else {
+            'warning' 
+        }
         $items.Add((New-HtmlInfoCard -Level $level -Title "Replication $($r.Health): $(ConvertTo-HtmlEncoded $r.Vm)" -Description "State: $(ConvertTo-HtmlEncoded $r.State)"))
     }
 
@@ -326,7 +384,11 @@ function New-HyperVWarningsSectionHtml {
     }
 
     foreach ($f in @($CheckpointFindings | Where-Object { $_.Level -in 'Warning', 'Critical' })) {
-        $level = if ($f.Level -eq 'Critical') { 'error' } else { 'warning' }
+        $level = if ($f.Level -eq 'Critical') {
+            'error' 
+        } else {
+            'warning' 
+        }
         $items.Add((New-HtmlInfoCard -Level $level -Title "Checkpoint $($f.Level): $(ConvertTo-HtmlEncoded $f.Vm)" -Description (ConvertTo-HtmlEncoded $f.Message)))
     }
 
@@ -339,7 +401,9 @@ function New-HyperVWarningsSectionHtml {
         $items.Add((New-HtmlInfoCard -Level 'warning' -Title 'CSV Storage Warning' -Description "$($csvWarn.Count) volume(s) are below $CsvWarnThresholdPct% free space."))
     }
 
-    if ($items.Count -eq 0) { return '' }
+    if ($items.Count -eq 0) {
+        return '' 
+    }
     $colItems = ($items | ForEach-Object { "<div class='col'>$_</div>" }) -join ''
     return "<h3><i class='fas fa-triangle-exclamation'></i>&nbsp;&nbsp;Warnings</h3><div class='row row-cols-1 row-cols-md-2 g-2'>$colItems</div>"
 }
@@ -382,11 +446,21 @@ function New-HyperVVmDetailsSectionHtml {
         $vmName = ConvertTo-HtmlEncoded $vm.Vm
         $stateText = ConvertTo-HtmlEncoded $vm.State
         $stateColor = switch ($vm.State) {
-            'Running' { 'color: #3c763d' }
-            'Off' { 'color: #777' }
-            'Paused' { 'color: #8a6d3b' }
-            'Saved' { 'color: #8a6d3b' }
-            default { '' }
+            'Running' {
+                'color: #3c763d' 
+            }
+            'Off' {
+                'color: #777' 
+            }
+            'Paused' {
+                'color: #8a6d3b' 
+            }
+            'Saved' {
+                'color: #8a6d3b' 
+            }
+            default {
+                '' 
+            }
         }
         $stateSpan = if ($stateColor) {
             "<span style='$stateColor'>[$stateText]</span>"
@@ -407,16 +481,29 @@ function New-HyperVVmDetailsSectionHtml {
         }
 
         $autoStartDisplay = $vm.AutomaticStartAction
-        if ($vm.AutomaticStartDelay -gt 0) { $autoStartDisplay += " (delay: $($vm.AutomaticStartDelay)s)" }
+        if ($vm.AutomaticStartDelay -gt 0) {
+            $autoStartDisplay += " (delay: $($vm.AutomaticStartDelay)s)" 
+        }
 
         $accentColor = switch ($vm.State) {
-            'Running' { '#3c763d' }
-            'Off' { '#777' }
-            'Paused' { '#8a6d3b' }
-            'Saved' { '#8a6d3b' }
-            default { '#ccc' }
+            'Running' {
+                '#3c763d' 
+            }
+            'Off' {
+                '#777' 
+            }
+            'Paused' {
+                '#8a6d3b' 
+            }
+            'Saved' {
+                '#8a6d3b' 
+            }
+            default {
+                '#ccc' 
+            }
         }
-        $rows.Add("<tr><th colspan='5' style='background:#f5f5f5;border-left:4px solid $accentColor;text-align:left;font-weight:normal;padding-left:8px'><strong>$vmName</strong> &nbsp; $stateSpan &nbsp;&nbsp; vCPUs: $($vm.AssignedCPUs)$numaFlag &nbsp;|&nbsp; RAM: $ramDisplay &nbsp;|&nbsp; Auto-start: $autoStartDisplay</th></tr>")
+        # VM Name and details row, centering the details took some effort, my HTML/CSS is bad. :D
+        $rows.Add("<tr><th colspan='5' style='background:#f5f5f5;border-left:4px solid $accentColor;font-weight:normal;padding:8px;white-space:nowrap'><span style='display:inline-block;width:20%;text-align:left;vertical-align:middle'><strong>$vmName</strong></span><span style='display:inline-block;width:60%;text-align:center;vertical-align:middle'>$stateSpan &nbsp;&nbsp; vCPUs: $($vm.AssignedCPUs)$numaFlag &nbsp;|&nbsp; RAM: $ramDisplay &nbsp;|&nbsp; Auto-start: $autoStartDisplay</span><span style='display:inline-block;width:20%;vertical-align:middle'></span></th></tr>")
 
         if ($vm.Disks -and $vm.Disks.Count -gt 0) {
             foreach ($disk in $vm.Disks) {
@@ -428,9 +515,19 @@ function New-HyperVVmDetailsSectionHtml {
                 $committed = [math]::Round($disk.CommittedVirtualGB, 2)
                 $pct = if ($provisioned -gt 0) {
                     [math]::Min(100, [math]::Round($committed / $provisioned * 100, 1))
-                } else { 0 }
-                $barColor = if ($disk.VirtualDiskType -eq 'Fixed') { '#337ab7' } elseif ($pct -ge 85) { '#d9534f' } elseif ($pct -ge 70) { '#f0ad4e' } else { '#5cb85c' }
-                $diskCell = New-HtmlProgressBar -Label "$provisioned / $committed GB ($pct%)" -Color $barColor -Percent $pct
+                } else {
+                    0 
+                }
+                $barColor = if ($disk.VirtualDiskType -eq 'Fixed') {
+                    '#337ab7' 
+                } elseif ($pct -ge 85) {
+                    '#d9534f' 
+                } elseif ($pct -ge 70) {
+                    '#f0ad4e' 
+                } else {
+                    '#5cb85c' 
+                }
+                $diskCell = New-HtmlProgressBar -Label "$committed / $provisioned GB ($pct%)" -Color $barColor -Percent $pct
                 $rows.Add("<tr><td>$driveLetter</td><td>$diskName</td><td>$fileName</td><td>$diskType</td><td>$diskCell</td></tr>")
             }
         } else {
@@ -852,7 +949,9 @@ function Get-CheckpointFindings {
 
     foreach ($vm in $AllVMs) {
         $checkpoints = @(Get-VMCheckpoint -VMName $vm.Name -ErrorAction SilentlyContinue)
-        if ($checkpoints.Count -eq 0) { continue }
+        if ($checkpoints.Count -eq 0) {
+            continue 
+        }
 
         # Chain depth check (per VM)
         $chainDepth = $checkpoints.Count
@@ -890,7 +989,11 @@ function Get-CheckpointFindings {
         foreach ($cp in $checkpoints) {
             $ageDays = [math]::Round(($now - $cp.CreationTime).TotalDays, 1)
             $cpName = $cp.Name
-            $cpType = if ($cp.CheckpointType) { [string]$cp.CheckpointType } else { 'Unknown' }
+            $cpType = if ($cp.CheckpointType) {
+                [string]$cp.CheckpointType 
+            } else {
+                'Unknown' 
+            }
 
             Add-ThresholdFinding -FindingsList $findings -VmName $vm.Name -Category 'Age' `
                 -Value $ageDays -CritThreshold $CritAgeDays -WarnThreshold $WarnAgeDays `
@@ -924,9 +1027,13 @@ function Get-ClusterSharedVolumeInfo {
         } else {
             0
         }
-        $rowColor = if ($pctFree -le $csvCritThresholdPct) { 'danger' }
-        elseif ($pctFree -le $csvWarnThresholdPct) { 'warning' }
-        else { 'success' }
+        $rowColor = if ($pctFree -le $csvCritThresholdPct) {
+            'danger' 
+        } elseif ($pctFree -le $csvWarnThresholdPct) {
+            'warning' 
+        } else {
+            'success' 
+        }
         $results.Add([pscustomobject]@{
                 Name        = $csv.Name
                 Path        = $vol.FriendlyVolumeName
@@ -1003,24 +1110,56 @@ $checkpointFindings = @(Get-CheckpointFindings -AllVMs $allVMs `
 # Pre-process replication rows (sorting + age/frequency labels)
 $replNow = Get-Date
 $sortedRepl = @($replicationInfo | Sort-Object {
-        switch ($_.Health) { 'Critical' { 0 } 'Warning' { 1 } default { 2 } }
+        switch ($_.Health) {
+            'Critical' {
+                0 
+            } 'Warning' {
+                1 
+            } default {
+                2 
+            } 
+        }
     }, {
-        if ($_.LastReplicationTime) { $_.LastReplicationTime } else { [datetime]::MinValue }
+        if ($_.LastReplicationTime) {
+            $_.LastReplicationTime 
+        } else {
+            [datetime]::MinValue 
+        }
     })
 $replRows = if ($replicationInfo.Count -gt 0) {
     @(
         $sortedRepl | ForEach-Object {
             $rowClass = switch ($_.Health) {
-                'Critical' { 'danger' } 'Warning' { 'warning' } default { 'success' }
+                'Critical' {
+                    'danger' 
+                } 'Warning' {
+                    'warning' 
+                } default {
+                    'success' 
+                }
             }
             $lastReplAge = if ($_.LastReplicationTime) {
                 $span = $replNow - $_.LastReplicationTime
-                if ($span.TotalDays -ge 1) { "$([math]::Round($span.TotalDays, 1)) days ago" }
-                elseif ($span.TotalHours -ge 1) { "$([math]::Round($span.TotalHours, 1)) hrs ago" }
-                else { "$([math]::Round($span.TotalMinutes, 0)) min ago" }
-            } else { 'Never' }
+                if ($span.TotalDays -ge 1) {
+                    "$([math]::Round($span.TotalDays, 1)) days ago" 
+                } elseif ($span.TotalHours -ge 1) {
+                    "$([math]::Round($span.TotalHours, 1)) hrs ago" 
+                } else {
+                    "$([math]::Round($span.TotalMinutes, 0)) min ago" 
+                }
+            } else {
+                'Never' 
+            }
             $freqLabel = switch ($_.FrequencyOfReplicationSec) {
-                30 { '30 sec' } 300 { '5 min' } 900 { '15 min' } default { "$($_.FrequencyOfReplicationSec) sec" }
+                30 {
+                    '30 sec' 
+                } 300 {
+                    '5 min' 
+                } 900 {
+                    '15 min' 
+                } default {
+                    "$($_.FrequencyOfReplicationSec) sec" 
+                }
             }
             "<tr class='$rowClass'><td>$(ConvertTo-HtmlEncoded $_.Vm)</td><td>$(ConvertTo-HtmlEncoded $_.Health)</td><td>$(ConvertTo-HtmlEncoded $_.State)</td><td>$(ConvertTo-HtmlEncoded $_.ReplicationMode)</td><td>$freqLabel</td><td>$(ConvertTo-HtmlEncoded $lastReplAge)</td></tr>"
         }
@@ -1028,7 +1167,9 @@ $replRows = if ($replicationInfo.Count -gt 0) {
             "<tr><td>$(ConvertTo-HtmlEncoded $_.Name)</td><td>Not configured</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>"
         }
     ) -join "`n"
-} else { $null }
+} else {
+    $null 
+}
 
 # --- Report generation ---
 
@@ -1040,12 +1181,14 @@ $reportBody = @(
 
     # Resource Report
     New-HtmlTable -Title 'Resource Report' -Icon 'fas fa-gauge-high' `
-        -Headers @('Resource', 'Usage', 'Available') `
+        -Headers @('Resource', 'Allocation', 'Available Headroom') `
         -Rows ((@(
                 # RAM (Assigned - Live)
                 $ramAssignedPct = if ($summary.TotalHostMemoryGB -gt 0) {
                     [math]::Round($summary.TotalAssignedRAMGB / $summary.TotalHostMemoryGB * 100, 1)
-                } else { 0 }
+                } else {
+                    0 
+                }
                 $ramAssignedBar = New-HtmlProgressBar `
                     -Label "$([math]::Round($summary.TotalAssignedRAMGB,2)) / $([math]::Round($summary.TotalHostMemoryGB,2)) GB ($ramAssignedPct%)" `
                     -Color (Get-ProgressBarColor -Percent $ramAssignedPct) `
@@ -1054,7 +1197,9 @@ $reportBody = @(
                 # RAM (Startup - All VMs)
                 $ramStartupPct = if ($summary.TotalHostMemoryGB -gt 0) {
                     [math]::Round($summary.TotalStartupRAMGB / $summary.TotalHostMemoryGB * 100, 1)
-                } else { 0 }
+                } else {
+                    0 
+                }
                 $ramStartupBar = New-HtmlProgressBar `
                     -Label "$([math]::Round($summary.TotalStartupRAMGB,2)) / $([math]::Round($summary.TotalHostMemoryGB,2)) GB ($ramStartupPct%)" `
                     -Color (Get-ProgressBarColor -Percent $ramStartupPct) `
@@ -1063,7 +1208,9 @@ $reportBody = @(
                 # CPU (Assigned - Live)
                 $cpuLivePct = if ($summary.TotalHostCores -gt 0) {
                     [math]::Round($summary.TotalLiveCPUs / $summary.TotalHostCores * 100, 1)
-                } else { 0 }
+                } else {
+                    0 
+                }
                 $cpuLiveBar = New-HtmlProgressBar `
                     -Label "$($summary.TotalLiveCPUs) / $($summary.TotalHostCores) CPUs ($cpuLivePct%)" `
                     -Color (Get-ProgressBarColor -Percent $cpuLivePct) `
@@ -1072,7 +1219,9 @@ $reportBody = @(
                 # CPU (All VMs)
                 $cpuAllPct = if ($summary.TotalHostCores -gt 0) {
                     [math]::Round($summary.TotalAssignedCPUs / $summary.TotalHostCores * 100, 1)
-                } else { 0 }
+                } else {
+                    0 
+                }
                 $cpuAllBar = New-HtmlProgressBar `
                     -Label "$($summary.TotalAssignedCPUs) / $($summary.TotalHostCores) CPUs ($cpuAllPct%)" `
                     -Color (Get-ProgressBarColor -Percent $cpuAllPct) `
@@ -1083,7 +1232,7 @@ $reportBody = @(
     # Physical Drives (hidden when all VHDs are on CSVs)
     if ($physicalDrives.Count -gt 0) {
         New-HtmlTable -Title 'Physical Drives' -Icon 'fas fa-hard-drive' `
-            -Headers @('Drive', 'Capacity', 'Provisioned / Committed', 'Other Files', 'Free (GB)') `
+            -Headers @('Drive', 'Capacity', 'Committed / Provisioned', 'Other Files', 'Free (GB)') `
             -Rows (($physicalDrives | ForEach-Object {
                     $drivePct = [math]::Round($_.TotalCommittedVirtualGB / $_.PhysicalDriveCapacityGB * 100, 1)
                     $driveBarColor = Get-AlertColor -Level $_.RowColor
@@ -1098,7 +1247,7 @@ $reportBody = @(
     # Cluster Shared Volumes (clustered hosts only)
     if ($isClustered) {
         New-HtmlTable -Title 'Cluster Shared Volumes' -Icon 'fas fa-server' `
-            -Headers @('CSV Name', 'Volume Path', 'Owner Node', 'Capacity (GB)', 'Used / Free', 'Free (GB)') `
+            -Headers @('CSV Name', 'Volume Path', 'Owner Node', 'Capacity (GB)', 'Used / Total', 'Free (GB)') `
             -Rows (($csvData | ForEach-Object {
                     $csvUsedPct = [math]::Round(100 - $_.PercentFree, 1)
                     $csvBarColor = Get-AlertColor -Level $_.RowColor
@@ -1119,7 +1268,11 @@ $reportBody = @(
     "<p>Host NUMA nodes: $numaNodeCount &nbsp;|&nbsp; Logical CPUs per NUMA node: $logicalCoresPerNuma</p>" +
     (New-HtmlTable -Headers @('VM', 'Severity', 'Finding') `
         -Rows (($cpuNumaFindings | ForEach-Object {
-                $rowClass = if ($_.Level -eq 'Warning') { " class='warning'" } else { '' }
+                $rowClass = if ($_.Level -eq 'Warning') {
+                    " class='warning'" 
+                } else {
+                    '' 
+                }
                 "<tr$rowClass><td>$(ConvertTo-HtmlEncoded $_.Vm)</td><td>$(ConvertTo-HtmlEncoded $_.Level)</td><td>$(ConvertTo-HtmlEncoded $_.Message)</td></tr>"
             }) -join "`n") `
         -EmptyMessage 'No CPU/NUMA configuration concerns found.') +
@@ -1134,7 +1287,13 @@ $reportBody = @(
     New-HtmlTable -Title 'Checkpoint Health' -Icon 'fas fa-camera' `
         -Headers @('VM', 'Severity', 'Category', 'Finding') `
         -Rows (($checkpointFindings | ForEach-Object {
-                $rowClass = if ($_.Level -eq 'Critical') { " class='danger'" } elseif ($_.Level -eq 'Warning') { " class='warning'" } else { '' }
+                $rowClass = if ($_.Level -eq 'Critical') {
+                    " class='danger'" 
+                } elseif ($_.Level -eq 'Warning') {
+                    " class='warning'" 
+                } else {
+                    '' 
+                }
                 "<tr$rowClass><td>$(ConvertTo-HtmlEncoded $_.Vm)</td><td>$(ConvertTo-HtmlEncoded $_.Level)</td><td>$(ConvertTo-HtmlEncoded $_.Category)</td><td>$(ConvertTo-HtmlEncoded $_.Message)</td></tr>"
             }) -join "`n") `
         -EmptyMessage 'No checkpoint concerns found.'
@@ -1185,7 +1344,9 @@ $exitChecks = @(
 )
 $exitLevel = 0
 foreach ($check in $exitChecks) {
-    if ($check.Flag -and $check.Condition) { $exitLevel = [math]::Max($exitLevel, $check.Level) }
+    if ($check.Flag -and $check.Condition) {
+        $exitLevel = [math]::Max($exitLevel, $check.Level) 
+    }
 }
 
 exit $exitLevel
