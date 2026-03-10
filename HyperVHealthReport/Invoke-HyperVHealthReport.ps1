@@ -535,7 +535,7 @@ function New-HyperVVmDetailsSectionHtml {
         }
     }
 
-    $table = "<table><thead><tr><th>Drive</th><th>Disk Name</th><th>File Name</th><th>Type</th><th>Provisioned / Committed (GB)</th></tr></thead><tbody>$($rows -join '')</tbody></table>"
+    $table = "<table><thead><tr><th>Drive</th><th>Disk Name</th><th>File Name</th><th>Type</th><th>Committed / Provisioned (GB)</th></tr></thead><tbody>$($rows -join '')</tbody></table>"
     return "<h3><i class='fas fa-desktop'></i>&nbsp;&nbsp;VM Details</h3>$table"
 }
 
