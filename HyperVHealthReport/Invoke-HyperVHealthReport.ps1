@@ -380,7 +380,7 @@ function New-HyperVWarningsSectionHtml {
     # Info-level CPU/NUMA findings (e.g. processor flags, CPU caps) are intentionally excluded
     # from the warnings section — they appear in the CPU/NUMA detail table below the fold.
     foreach ($f in @($CpuNumaFindings | Where-Object { $_.Level -eq 'Warning' })) {
-        $items.Add((New-HtmlInfoCard -Level 'warning' -Title "CPU/NUMA: $(ConvertTo-HtmlEncoded $f.Vm)" -Description (ConvertTo-HtmlEncoded $f.Message)))
+        $items.Add((New-HtmlInfoCard -Level 'warning' -Title "CPU/NUMA: $(ConvertTo-HtmlEncoded $f.Vm)" -Description $(ConvertTo-HtmlEncoded $f.Message)))
     }
 
     foreach ($f in @($CheckpointFindings | Where-Object { $_.Level -in 'Warning', 'Critical' })) {
@@ -389,7 +389,7 @@ function New-HyperVWarningsSectionHtml {
         } else {
             'warning' 
         }
-        $items.Add((New-HtmlInfoCard -Level $level -Title "Checkpoint $($f.Level): $(ConvertTo-HtmlEncoded $f.Vm)" -Description (ConvertTo-HtmlEncoded $f.Message)))
+        $items.Add((New-HtmlInfoCard -Level $level -Title "Checkpoint $($f.Level): $(ConvertTo-HtmlEncoded $f.Vm)" -Description $(ConvertTo-HtmlEncoded $f.Message)))
     }
 
     $csvCrit = @($CsvData | Where-Object { $_.RowColor -eq 'danger' })
@@ -443,8 +443,8 @@ function New-HyperVVmDetailsSectionHtml {
 
     $rows = [System.Collections.Generic.List[string]]::new()
     foreach ($vm in $vmDetails) {
-        $vmName = ConvertTo-HtmlEncoded $vm.Vm
-        $stateText = ConvertTo-HtmlEncoded $vm.State
+        $vmName = $(ConvertTo-HtmlEncoded $vm.Vm)
+        $stateText = $(ConvertTo-HtmlEncoded $vm.State)
         $stateColor = switch ($vm.State) {
             'Running' {
                 'color: #3c763d' 
@@ -477,7 +477,7 @@ function New-HyperVVmDetailsSectionHtml {
         $ramDisplay = if ($vm.AssignedRAMGB -gt 0) {
             "$($vm.AssignedRAMGB) GB"
         } else {
-            "$($vm.StartupRAMGB) GB (startup config - VM is $($vm.State))"
+            "$($vm.StartupRAMGB) GB (startup config - VM is $($vm.State)"
         }
 
         $autoStartDisplay = $vm.AutomaticStartAction
@@ -507,10 +507,10 @@ function New-HyperVVmDetailsSectionHtml {
 
         if ($vm.Disks -and $vm.Disks.Count -gt 0) {
             foreach ($disk in $vm.Disks) {
-                $driveLetter = ConvertTo-HtmlEncoded $disk.PhysicalDriveLetter
-                $diskName = ConvertTo-HtmlEncoded $disk.VirtualDiskName
-                $fileName = ConvertTo-HtmlEncoded $disk.FileName
-                $diskType = ConvertTo-HtmlEncoded $disk.VirtualDiskType
+                $driveLetter = $(ConvertTo-HtmlEncoded $disk.PhysicalDriveLetter)
+                $diskName = $(ConvertTo-HtmlEncoded $disk.VirtualDiskName)
+                $fileName = $(ConvertTo-HtmlEncoded $disk.FileName)
+                $diskType = $(ConvertTo-HtmlEncoded $disk.VirtualDiskType)
                 $provisioned = [math]::Round($disk.ProvisionedVirtualGB, 2)
                 $committed = [math]::Round($disk.CommittedVirtualGB, 2)
                 $pct = if ($provisioned -gt 0) {
@@ -545,52 +545,52 @@ function Get-VirtualDiskInfo {
         [Parameter(Mandatory)]
         [object[]]$AllVMs
     )
-    return $AllVMs | ForEach-Object {
-        $Vm = $_
-        $_.HardDrives | ForEach-Object {
-            try {
-                $GetVhd = Get-VHD -Path $_.Path -ErrorAction Stop
-                $vhdType = $GetVhd.VhdType
-                $provisionedGB = [double]($GetVhd.Size / 1GB)
-                $committedGB = [double]($GetVhd.FileSize / 1GB)
-            } catch {
-                Write-Warning "Failed to read VHD '$($_.Path)': $_"
-                $vhdType = '[Error]'
-                $provisionedGB = 0
-                $committedGB = 0
-            }
-
-            $diskPath = Split-Path $_.Path -Parent
-            try {
-                $physicalDriveLetter = (Get-Item $diskPath -ErrorAction Stop).PSDrive.Name
-                $physicalDriveInfo = Get-PSDrive -Name $physicalDriveLetter -ErrorAction Stop
-            } catch {
-                $physicalDriveLetter = 'Unknown'
-                $physicalDriveInfo = $null
-            }
-
-            [pscustomobject]@{
-                Vm                      = $Vm.Name
-                VirtualDiskName         = $_.Name
-                VirtualDiskType         = $vhdType
-                ProvisionedVirtualGB    = $provisionedGB
-                CommittedVirtualGB      = $committedGB
-                FileName                = [System.IO.Path]::GetFileName($_.Path)
-                IsOnCsv                 = ([string]$_.Path -like '*\ClusterStorage\*')
-                PhysicalDriveLetter     = $physicalDriveLetter
-                PhysicalDriveCapacityGB = if ($physicalDriveInfo) {
-                    [double](($physicalDriveInfo.Used + $physicalDriveInfo.Free) / 1GB) 
-                } else {
-                    0 
+    return [array]($AllVMs | ForEach-Object {
+            $Vm = $_
+            $_.HardDrives | ForEach-Object {
+                try {
+                    $GetVhd = Get-VHD -Path $_.Path -ErrorAction Stop
+                    $vhdType = $GetVhd.VhdType
+                    $provisionedGB = [double]($GetVhd.Size / 1GB)
+                    $committedGB = [double]($GetVhd.FileSize / 1GB)
+                } catch {
+                    Write-Warning "Failed to read VHD '$($_.Path)': $_"
+                    $vhdType = '[Error]'
+                    $provisionedGB = 0
+                    $committedGB = 0
                 }
-                PhysicalDriveFreeGB     = if ($physicalDriveInfo) {
-                    [double]($physicalDriveInfo.Free / 1GB) 
-                } else {
-                    0 
+
+                $diskPath = Split-Path $_.Path -Parent
+                try {
+                    $physicalDriveLetter = (Get-Item $diskPath -ErrorAction Stop).PSDrive.Name
+                    $physicalDriveInfo = Get-PSDrive -Name $physicalDriveLetter -ErrorAction Stop
+                } catch {
+                    $physicalDriveLetter = 'Unknown'
+                    $physicalDriveInfo = $null
+                }
+
+                [pscustomobject]@{
+                    Vm                      = $Vm.Name
+                    VirtualDiskName         = $_.Name
+                    VirtualDiskType         = $vhdType
+                    ProvisionedVirtualGB    = $provisionedGB
+                    CommittedVirtualGB      = $committedGB
+                    FileName                = [System.IO.Path]::GetFileName($_.Path)
+                    IsOnCsv                 = ([string]$_.Path -like '*\ClusterStorage\*')
+                    PhysicalDriveLetter     = $physicalDriveLetter
+                    PhysicalDriveCapacityGB = if ($physicalDriveInfo) {
+                        [double](($physicalDriveInfo.Used + $physicalDriveInfo.Free) / 1GB)
+                    } else {
+                        0
+                    }
+                    PhysicalDriveFreeGB     = if ($physicalDriveInfo) {
+                        [double]($physicalDriveInfo.Free / 1GB)
+                    } else {
+                        0
+                    }
                 }
             }
-        }
-    }
+        })
 }
 
 function Get-MemoryInfo {
@@ -599,19 +599,19 @@ function Get-MemoryInfo {
         [Parameter(Mandatory)]
         [object[]]$AllVMs
     )
-    return $AllVMs | ForEach-Object {
-        [pscustomobject]@{
-            Vm                   = $_.Name
-            DynamicMemoryEnabled = [bool]$_.DynamicMemoryEnabled
-            StartupRAMGB         = [double]($_.MemoryStartup / 1GB)
-            AssignedRAMGB        = [double]($_.MemoryAssigned / 1GB)
-            DynamicMaxCeilingGB  = if ($_.DynamicMemoryEnabled) {
-                [double]($_.MemoryMaximum / 1GB) 
-            } else {
-                0 
+    return [array]($AllVMs | ForEach-Object {
+            [pscustomobject]@{
+                Vm                   = $_.Name
+                DynamicMemoryEnabled = [bool]$_.DynamicMemoryEnabled
+                StartupRAMGB         = [double]($_.MemoryStartup / 1GB)
+                AssignedRAMGB        = [double]($_.MemoryAssigned / 1GB)
+                DynamicMaxCeilingGB  = if ($_.DynamicMemoryEnabled) {
+                    [double]($_.MemoryMaximum / 1GB)
+                } else {
+                    0
+                }
             }
-        }
-    }
+        })
 }
 
 function Get-VMProcessorConfig {
@@ -620,77 +620,77 @@ function Get-VMProcessorConfig {
         [Parameter(Mandatory)]
         [object[]]$AllVMs
     )
-    return $AllVMs | ForEach-Object {
-        $proc = Get-VMProcessor -VMName $_.Name -ErrorAction SilentlyContinue
-        if (-not $proc) {
-            Write-Warning "Get-VMProcessor returned nothing for VM '$($_.Name)'. CPU config checks will be skipped for this VM."
-        }
-        [pscustomobject]@{
-            Vm                           = $_.Name
-            AssignedCPUs                 = [int]$_.ProcessorCount
-            IsRunning                    = ($_.State -eq 'Running')
-            ProcReadFailed               = ($null -eq $proc)
-            MaxCountPerNumaNode          = if ($proc) {
-                [int]$proc.MaximumCountPerNumaNode 
-            } else {
-                0 
+    return [array]($AllVMs | ForEach-Object {
+            $proc = Get-VMProcessor -VMName $_.Name -ErrorAction SilentlyContinue
+            if (-not $proc) {
+                Write-Warning "Get-VMProcessor returned nothing for VM '$($_.Name)'. CPU config checks will be skipped for this VM."
             }
-            MaxCountPerNumaSocket        = if ($proc) {
-                [int]$proc.MaximumCountPerNumaSocket 
-            } else {
-                0 
+            [pscustomobject]@{
+                Vm                           = $_.Name
+                AssignedCPUs                 = [int]$_.ProcessorCount
+                IsRunning                    = ($_.State -eq 'Running')
+                ProcReadFailed               = ($null -eq $proc)
+                MaxCountPerNumaNode          = if ($proc) {
+                    [int]$proc.MaximumCountPerNumaNode
+                } else {
+                    0
+                }
+                MaxCountPerNumaSocket        = if ($proc) {
+                    [int]$proc.MaximumCountPerNumaSocket
+                } else {
+                    0
+                }
+                CompatibilityForMigration    = if ($proc) {
+                    [bool]$proc.CompatibilityForMigrationEnabled
+                } else {
+                    $false
+                }
+                CompatibilityForOlderOS      = if ($proc) {
+                    [bool]$proc.CompatibilityForOlderOperatingSystemsEnabled
+                } else {
+                    $false
+                }
+                EnableHostResourceProtection = if ($proc) {
+                    [bool]$proc.EnableHostResourceProtection
+                } else {
+                    $false
+                }
+                Reserve                      = if ($proc) {
+                    [int]$proc.Reserve
+                } else {
+                    0
+                }
+                Maximum                      = if ($proc) {
+                    [int]$proc.Maximum
+                } else {
+                    0
+                }
             }
-            CompatibilityForMigration    = if ($proc) {
-                [bool]$proc.CompatibilityForMigrationEnabled 
-            } else {
-                $false 
-            }
-            CompatibilityForOlderOS      = if ($proc) {
-                [bool]$proc.CompatibilityForOlderOperatingSystemsEnabled 
-            } else {
-                $false 
-            }
-            EnableHostResourceProtection = if ($proc) {
-                [bool]$proc.EnableHostResourceProtection 
-            } else {
-                $false 
-            }
-            Reserve                      = if ($proc) {
-                [int]$proc.Reserve 
-            } else {
-                0 
-            }
-            Maximum                      = if ($proc) {
-                [int]$proc.Maximum 
-            } else {
-                0 
-            }
-        }
-    }
+        })
 }
 
 function Get-ReplicationInfo {
     [CmdletBinding()]
     param()
     try {
-        return Get-VMReplication -ErrorAction Stop | ForEach-Object {
-            $freqSec = if ($_.FrequencyOfReplication) {
-                [int]$_.FrequencyOfReplication.TotalSeconds
-            } else {
-                300 
-            }
-            [pscustomobject]@{
-                Vm                          = $_.VMName
-                ReplicationMode             = [string]$_.ReplicationMode
-                ReplicationRelationshipType = [string]$_.ReplicationRelationshipType
-                Health                      = [string]$_.Health
-                State                       = [string]$_.State
-                PrimaryServer               = [string]$_.PrimaryServerName
-                ReplicaServer               = [string]$_.ReplicaServerName
-                LastReplicationTime         = $_.LastReplicationTime
-                FrequencyOfReplicationSec   = $freqSec
-            }
-        }
+        return [array](Get-VMReplication -ErrorAction Stop | ForEach-Object {
+                $freqSec = if ($_.FrequencyOfReplication) {
+                    [int]$_.FrequencyOfReplication.TotalSeconds
+                } else {
+                    300
+                }
+                [pscustomobject]@{
+                    Vm                          = $_.VMName
+                    ReplicationMode             = [string]$_.ReplicationMode
+                    ReplicationRelationshipType = [string]$_.ReplicationRelationshipType
+                    Health                      = [string]$_.Health
+                    State                       = [string]$_.State
+                    PrimaryServer               = [string]$_.PrimaryServerName
+                    ReplicaServer               = [string]$_.ReplicaServerName
+                    LastReplicationTime         = $_.LastReplicationTime
+                    FrequencyOfReplicationSec   = $freqSec
+                }
+            })
     } catch {
         Write-Warning "Get-VMReplication failed: $_"
         return @()
@@ -810,41 +810,41 @@ function Get-PhysicalDriveSummary {
         [object[]]$AllVirtualDisks,
         [string[]]$CsvDriveLetters = @()
     )
-    return $AllVirtualDisks | Group-Object -Property PhysicalDriveLetter | ForEach-Object {
-        $physicalDriveLetter = $_.Name
-        $physicalDriveCapacity = [double]($_.Group | Select-Object -First 1 | ForEach-Object { $_.PhysicalDriveCapacityGB })
-        $totalProvisionedVirtual = [double](($_.Group | Measure-Object -Property ProvisionedVirtualGB -Sum).Sum)
-        $totalCommittedVirtual = [double](($_.Group | Measure-Object -Property CommittedVirtualGB -Sum).Sum)
-        $physicalDriveFree = [double]($_.Group | Select-Object -First 1 | ForEach-Object { $_.PhysicalDriveFreeGB })
+    return [array]($AllVirtualDisks | Group-Object -Property PhysicalDriveLetter | ForEach-Object {
+            $physicalDriveLetter = $_.Name
+            $physicalDriveCapacity = [double]($_.Group | Select-Object -First 1 | ForEach-Object { $_.PhysicalDriveCapacityGB })
+            $totalProvisionedVirtual = [double](($_.Group | Measure-Object -Property ProvisionedVirtualGB -Sum).Sum)
+            $totalCommittedVirtual = [double](($_.Group | Measure-Object -Property CommittedVirtualGB -Sum).Sum)
+            $physicalDriveFree = [double]($_.Group | Select-Object -First 1 | ForEach-Object { $_.PhysicalDriveFreeGB })
 
-        # Headroom: free space remaining if all VMs grew to their fully provisioned size
-        # = actual free space - (provisioned max - currently committed)
-        $headroomGB = [double]($physicalDriveFree - ($totalProvisionedVirtual - $totalCommittedVirtual))
+            # Headroom: free space remaining if all VMs grew to their fully provisioned size
+            # = actual free space - (provisioned max - currently committed)
+            $headroomGB = [double]($physicalDriveFree - ($totalProvisionedVirtual - $totalCommittedVirtual))
 
-        # Row color based on overprovisioning risk (CSV drives tracked separately)
-        $rowColor = if ($physicalDriveLetter -in $CsvDriveLetters) {
-            'success'
-        } elseif ($headroomGB -le 0) {
-            'danger'
-        } elseif ($headroomGB -le $diskWarnThresholdGB) {
-            'warning'
-        } else {
-            'success'
-        }
+            # Row color based on overprovisioning risk (CSV drives tracked separately)
+            $rowColor = if ($physicalDriveLetter -in $CsvDriveLetters) {
+                'success'
+            } elseif ($headroomGB -le 0) {
+                'danger'
+            } elseif ($headroomGB -le $diskWarnThresholdGB) {
+                'warning'
+            } else {
+                'success'
+            }
 
-        [pscustomobject]@{
-            PhysicalDriveLetter               = $physicalDriveLetter
-            PhysicalDriveCapacityGB           = $physicalDriveCapacity
-            PhysicalDriveFreeGB               = $physicalDriveFree
-            TotalProvisionedVirtualGB         = $totalProvisionedVirtual
-            TotalCommittedVirtualGB           = $totalCommittedVirtual
-            NonVmFilesGB                      = [double]($physicalDriveCapacity - $totalCommittedVirtual - $physicalDriveFree)
-            HeadroomGB                        = $headroomGB
-            CapacityMinusCommittedVirtualGB   = [double]($physicalDriveCapacity - $totalCommittedVirtual)
-            CapacityMinusProvisionedVirtualGB = [double]($physicalDriveCapacity - $totalProvisionedVirtual)
-            RowColor                          = $rowColor
-        }
-    }
+            [pscustomobject]@{
+                PhysicalDriveLetter               = $physicalDriveLetter
+                PhysicalDriveCapacityGB           = $physicalDriveCapacity
+                PhysicalDriveFreeGB               = $physicalDriveFree
+                TotalProvisionedVirtualGB         = $totalProvisionedVirtual
+                TotalCommittedVirtualGB           = $totalCommittedVirtual
+                NonVmFilesGB                      = [double]($physicalDriveCapacity - $totalCommittedVirtual - $physicalDriveFree)
+                HeadroomGB                        = $headroomGB
+                CapacityMinusCommittedVirtualGB   = [double]($physicalDriveCapacity - $totalCommittedVirtual)
+                CapacityMinusProvisionedVirtualGB = [double]($physicalDriveCapacity - $totalProvisionedVirtual)
+                RowColor                          = $rowColor
+            }
+        })
 }
 
 function Test-Overprovisioning {
@@ -862,7 +862,7 @@ function Test-Overprovisioning {
         [Parameter(Mandatory)]
         [int]$TotalHostCores
     )
-    if ($PhysicalDrives.Count -eq 0) {
+    if (-not $PhysicalDrives) {
         return [pscustomobject]@{
             TotalPhysicalCapacityGB   = 0
             TotalProvisionedVirtualGB = 0
@@ -1126,7 +1126,7 @@ $sortedRepl = @($replicationInfo | Sort-Object {
             [datetime]::MinValue 
         }
     })
-$replRows = if ($replicationInfo.Count -gt 0) {
+$replRows = if ($replicationInfo) {
     @(
         $sortedRepl | ForEach-Object {
             $rowClass = switch ($_.Health) {
@@ -1230,7 +1230,7 @@ $reportBody = @(
             ) | Where-Object { $_ -match '^<tr' }) -join "`n")
 
     # Physical Drives (hidden when all VHDs are on CSVs)
-    if ($physicalDrives.Count -gt 0) {
+    if ($physicalDrives) {
         New-HtmlTable -Title 'Physical Drives' -Icon 'fas fa-hard-drive' `
             -Headers @('Drive', 'Capacity', 'Committed / Provisioned', 'Other Files', 'Free (GB)') `
             -Rows (($physicalDrives | ForEach-Object {
