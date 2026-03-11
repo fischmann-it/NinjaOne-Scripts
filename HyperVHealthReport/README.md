@@ -6,70 +6,6 @@ A mostly comprehensive health monitoring solution for Hyper-V hosts that generat
 
 This script collects capacity and health data from Hyper-V hosts and displays it as a beautiful, color-coded HTML card in NinjaOne. It can be used either as a **Condition** to trigger alerts and update the custom field report, or as a **Scheduled Automation** for just the custom field report.
 
-## Features
-
-### Health Checks
-
-- **Disk Overprovisioning**: Warns when provisioned virtual disk space exceeds physical capacity
-- **RAM Overprovisioning**: Alerts when startup RAM exceeds host memory (cannot cold-boot all VMs)
-- **CPU Oversubscription**: Tracks vCPU:pCore ratios and NUMA spanning issues
-- **Replication Health**: Monitors Hyper-V Replica status and last replication times
-- **Checkpoint Management**: Flags old, oversized, or deep checkpoint chains
-- **CSV Storage**: Monitors cluster shared volume capacity on clustered hosts
-
-![Screenshot placeholder - Warnings section](screenshots/warnings-section.png)
-*Warning cards showing detected issues with severity levels*
-
-### Resource Monitoring
-
-- **RAM Tracking**: Both live-assigned and startup configuration (cold-boot capacity)
-- **CPU Allocation**: Live and total vCPU assignments with oversubscription detection
-- **Disk Capacity**: Physical drive provisioning vs. committed space with headroom calculations
-- **Cluster Storage**: CSV free space monitoring on failover clusters
-
-![Screenshot placeholder - Resource report section](screenshots/resource-report.png)
-*Resource allocation progress bars showing RAM, CPU, and disk usage*
-![Screenshot placeholder - Resource report section](screenshots/cluster-storage.png)
-*Cluster Storage allocation and free space*
-
-
-### VM Details
-
-Each VM displays:
-
-- Current state (Running, Off, Paused, Saved)
-- vCPU count with NUMA span warnings
-- RAM allocation (assigned or startup)
-- Auto-start configuration
-- Virtual disk details with type (Fixed/Dynamic/Differencing) and committed/provisioned space!
-
-![Screenshot placeholder - VM details section](screenshots/vm-details.png)
-*Detailed per-VM information including disks and configuration*
-
-### CPU/NUMA Configuration
-
-- Per-VM processor settings, compatibility flags, and NUMA topology analysis
-- Links to guidance because this is under-understood.
-
-![Screenshot placeholder - CPU/NUMA section](screenshots/cpu-numa-section.png)
-*CPU and NUMA configuration findings*
-
-### Replication Health
-
-- Complete replication health with frequency and last sync time
-
-![Screenshot placeholder - Replication Health](screenshots/replication-health.png)
-*VM Replication Health Status*
-
-### Checkpoint Analysis
-
-- Age, size, and chain depth tracking per VM
-
-![Screenshot placeholder - Checkpoint Health](screenshots/checkpoint-health.png)
-*VM Replication Health Status*
-
----
-
 ## Prerequisites
 
 - Hyper-V host with PowerShell module installed
@@ -103,9 +39,9 @@ All settings have sensible defaults. I suggest overriding them per-device or per
 
 #### Disk Thresholds
 
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `diskWarnThresholdGb` | Integer | `100` | GB of free headroom (capacity - provisioned) below which a drive is flagged |
+| Variable              | Type    | Default | Description                                                                 |
+|-----------------------|---------|---------|-----------------------------------------------------------------------------|
+| `diskWarnThresholdGb` | Integer | `100`   | GB of free headroom (capacity - provisioned) below which a drive is flagged |
 
 #### Checkpoint Thresholds
 
@@ -136,13 +72,10 @@ These flags let you control which categories contribute to the exit code. Set to
 
 #### CSV (Cluster Shared Volume) Thresholds
 
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `csvWarnThresholdPct` | Integer | `15` | CSV % free below which a volume is flagged as warning |
-| `csvCritThresholdPct` | Integer | `5` | CSV % free below which a volume is flagged as critical |
-
-![Screenshot placeholder - Script variables](screenshots/script-variables.png)
-*Configuring script variables in NinjaOne*
+| Variable              | Type    | Default | Description                                                    |
+|-----------------------|---------|---------|----------------------------------------------------------------|
+| `csvWarnThresholdPct` | Integer | `15`    | CSV % free below which a volume is flagged as warning          |
+| `csvCritThresholdPct` | Integer | `5`     | CSV % free below which a volume is flagged as critical         |
 
 ---
 
@@ -167,11 +100,30 @@ The script uses exit codes to indicate overall health status:
 
 ### 1. Warnings (Top Section)
 
-Highlights all critical and warning conditions in expandable cards. This section is hidden if everything is healthy.
+Highlights all critical and warning conditions in expandable cards including:
+
+- **Disk Overprovisioning**: Warns when provisioned virtual disk space exceeds physical capacity
+- **RAM Overprovisioning**: Alerts when startup RAM exceeds host memory (cannot cold-boot all VMs)
+- **CPU Oversubscription**: Tracks vCPU:pCore ratios and NUMA spanning issues
+- **Replication Health**: Monitors Hyper-V Replica status and last replication times
+- **Checkpoint Management**: Flags old, oversized, or deep checkpoint chains
+- **CSV Storage**: Monitors cluster shared volume capacity on clustered hosts
+
+This section is hidden if everything is healthy.
+
+![Screenshot placeholder - Warnings section](screenshots/warnings-section.png)
+*Warning cards showing detected issues with severity levels*
 
 ### 2. Resource Report
 
-High-level overview of RAM, CPU, and disk allocation across all VMs with progress bars showing utilization.
+High-level overview of RAM, CPU, and disk allocation across all VMs with progress bars showing utilization:
+
+- **RAM Tracking**: Both live-assigned and startup configuration (cold-boot capacity)
+- **CPU Allocation**: Live and total vCPU assignments with oversubscription detection
+- **Disk Capacity**: Physical drive provisioning vs. committed space with headroom calculations
+
+![Screenshot placeholder - Resource report section](screenshots/resource-report.png)
+*Resource allocation progress bars showing RAM, CPU, and disk usage*
 
 ### 3. Physical Drives
 
@@ -181,37 +133,54 @@ Detailed capacity view of local drives showing provisioned vs. committed space a
 
 ### 4. Cluster Shared Volumes
 
-CSV capacity and owner node information (clustered hosts only).
+CSV capacity and owner node information with free space monitoring (clustered hosts only).
 
 **Note**: This section is automatically hidden on standalone hosts.
+
+![Screenshot placeholder - Cluster storage section](screenshots/cluster-storage.png)
+*Cluster Storage allocation and free space*
 
 ### 5. VM Details
 
 Comprehensive per-VM breakdown including:
 
-- State, vCPUs, RAM, auto-start settings
-- All attached virtual disks with type and space usage
+- Current state (Running, Off, Paused, Saved)
+- vCPU count with NUMA span warnings
+- RAM allocation (assigned or startup)
+- Auto-start configuration
+- Virtual disk details with type (Fixed/Dynamic/Differencing) and committed/provisioned space
 - Color-coded state indicators
+
+![Screenshot placeholder - VM details section](screenshots/vm-details.png)
+*Detailed per-VM information including disks and configuration*
 
 ### 6. CPU / NUMA Configuration
 
 Advanced processor configuration findings including:
 
+- Per-VM processor settings and NUMA topology analysis
 - NUMA span warnings
 - vCPU:pCore ratio analysis
 - Compatibility mode flags
 - CPU caps, reserves, and resource protection settings
+- Links to guidance because this is under-understood
+
+![Screenshot placeholder - CPU/NUMA section](screenshots/cpu-numa-section.png)
+*CPU and NUMA configuration findings*
 
 ### 7. Replication Health
 
-Hyper-V Replica status with:
+Hyper-V Replica status with complete replication health monitoring:
 
 - Health state (Normal, Warning, Critical)
 - Replication mode and frequency
-- Last replication time
+- Last replication time and sync status
 - Lists unreplicated VMs for visibility
 
 **Note**: This section is automatically hidden if no VMs are configured for replication.
+
+![Screenshot placeholder - Replication Health](screenshots/replication-health.png)
+*VM Replication Health Status*
 
 ### 8. Checkpoint Health
 
@@ -220,6 +189,9 @@ Checkpoint analysis showing:
 - Age violations (checkpoints older than thresholds)
 - Size violations (total AVHDX footprint per VM)
 - Chain depth violations (number of checkpoints per VM)
+
+![Screenshot placeholder - Checkpoint Health](screenshots/checkpoint-health.png)
+*VM Checkpoint Health Status*
 
 ---
 
@@ -232,15 +204,18 @@ Checkpoint analysis showing:
 **Solutions**:
 
 1. Verify the custom field `hypervHealth` exists and is type **WYSIWYG**
-2. Check that the script is running as **SYSTEM**
-3. Verify the Hyper-V PowerShell module is installed: `Get-Module -Name Hyper-V -ListAvailable`
+2. Verify the custom field permissions allows Automations to WRITE.
+3. Check that the script is running as **SYSTEM**
 4. Check NinjaOne activity log for script execution errors
 
 ### Exit Code Always 0 (No Alerts)
 
 **Symptoms**: Issues are visible in HTML but no alerts trigger.
 
-**Solution**: Check alert flags - the relevant category may have its alert flag set to `false`. For example, if CPU overprovisioning shows in the report but doesn't trigger alerts, verify `alertOnCPUOverprovisioning` is set to `true`.
+**Solution**:
+
+- Check alert flags - the relevant category may have its alert flag set to `false`. For example, if CPU overprovisioning shows in the report but doesn't trigger alerts, verify `alertOnCPUOverprovisioning` is set to `true`.
+- Make sure you're running the script as a Condition, and are looking for Result Code not equal to 0 (or equal to 2 if limiting to critical issues.)
 
 ---
 
