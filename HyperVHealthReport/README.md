@@ -253,17 +253,3 @@ Checkpoint analysis showing:
 ---
 
 See the TODO section in the script for planned enhancements.
-
----
-
-## Screenshots
-
-*Note: Screenshots are placeholders. Replace with actual screenshots from your NinjaOne environment:*
-
-1. `screenshots/warnings-section.png` - Warning cards with issues
-2. `screenshots/resource-report.png` - Resource allocation bars
-3. `screenshots/cluster-storage.png` - Cluster Storage Disks
-4. `screenshots/vm-details.png` - Per-VM detailed view
-5. `screenshots/cpu-numa-section.png` - CPU/NUMA findings
-6. `screenshots/replication-health.png` - VM Replication Health
-7. `screenshots/checkpoint-health.png` - Checkpoint Health
