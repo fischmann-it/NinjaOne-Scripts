@@ -778,6 +778,9 @@ function Get-PhysicalDriveSummary {
         [object[]]$AllVirtualDisks,
         [string[]]$CsvDriveLetters = @()
     )
+    if (@($AllVirtualDisks).Length -eq 0) {
+        return @()
+    }
     return [array]($AllVirtualDisks | Group-Object -Property PhysicalDriveLetter | ForEach-Object {
             $physicalDriveLetter = $_.Name
             $physicalDriveCapacity = [double]($_.Group | Select-Object -First 1 | ForEach-Object { $_.PhysicalDriveCapacityGB })
@@ -830,7 +833,7 @@ function Test-Overprovisioning {
         [Parameter(Mandatory)]
         [int]$TotalHostCores
     )
-    if (-not $PhysicalDrives) {
+    if (@($PhysicalDrives).Length -eq 0) {
         return [pscustomobject]@{
             TotalPhysicalCapacityGB   = 0
             TotalProvisionedVirtualGB = 0
@@ -875,6 +878,7 @@ function Test-Overprovisioning {
 function Add-ThresholdFinding {
     [CmdletBinding()]
     param(
+        [AllowEmptyCollection()]
         [Parameter(Mandatory)]
         [System.Collections.Generic.List[pscustomobject]]$FindingsList,
         [Parameter(Mandatory)]
