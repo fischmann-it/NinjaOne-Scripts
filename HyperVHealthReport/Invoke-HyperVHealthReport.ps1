@@ -29,7 +29,7 @@
     Designed for: NinjaOne Automation / Condition on Hyper-V hosts
     Run As: SYSTEM
 
-    Script Variables (all optional — configure in NinjaOne to override defaults):
+    Script Variables (all optional — I recommend configuring in NinjaOne to override defaults instead of hardcoding changes, that way updates to the script can be drop-in without losing custom thresholds or alert flags):
     ┌──────────────────────────────┬──────────┬─────────┬──────────────────────────────────────────────────────┐
     │ Variable Name                │ Type     │ Default │ Description                                          │
     ├──────────────────────────────┼──────────┼─────────┼──────────────────────────────────────────────────────┤
@@ -630,41 +630,13 @@ function Get-VMProcessorConfig {
                 AssignedCPUs                 = [int]$_.ProcessorCount
                 IsRunning                    = ($_.State -eq 'Running')
                 ProcReadFailed               = ($null -eq $proc)
-                MaxCountPerNumaNode          = if ($proc) {
-                    [int]$proc.MaximumCountPerNumaNode
-                } else {
-                    0
-                }
-                MaxCountPerNumaSocket        = if ($proc) {
-                    [int]$proc.MaximumCountPerNumaSocket
-                } else {
-                    0
-                }
-                CompatibilityForMigration    = if ($proc) {
-                    [bool]$proc.CompatibilityForMigrationEnabled
-                } else {
-                    $false
-                }
-                CompatibilityForOlderOS      = if ($proc) {
-                    [bool]$proc.CompatibilityForOlderOperatingSystemsEnabled
-                } else {
-                    $false
-                }
-                EnableHostResourceProtection = if ($proc) {
-                    [bool]$proc.EnableHostResourceProtection
-                } else {
-                    $false
-                }
-                Reserve                      = if ($proc) {
-                    [int]$proc.Reserve
-                } else {
-                    0
-                }
-                Maximum                      = if ($proc) {
-                    [int]$proc.Maximum
-                } else {
-                    0
-                }
+                MaxCountPerNumaNode          = if ($proc) { [int]$proc.MaximumCountPerNumaNode } else { 0 }
+                MaxCountPerNumaSocket        = if ($proc) { [int]$proc.MaximumCountPerNumaSocket } else { 0 }
+                CompatibilityForMigration    = if ($proc) { [bool]$proc.CompatibilityForMigrationEnabled } else { $false }
+                CompatibilityForOlderOS      = if ($proc) { [bool]$proc.CompatibilityForOlderOperatingSystemsEnabled } else { $false }
+                EnableHostResourceProtection = if ($proc) { [bool]$proc.EnableHostResourceProtection } else { $false }
+                Reserve                      = if ($proc) { [int]$proc.Reserve } else { 0 }
+                Maximum                      = if ($proc) { [int]$proc.Maximum } else { 0 }
             }
         })
 }
@@ -713,11 +685,7 @@ function Get-CPUNUMAFindings {
         $vcpus = $vm.AssignedCPUs
 
         # Use the VM's configured per-NUMA limit if available; fall back to host heuristic
-        $effectiveNumaSize = if ($vm.MaxCountPerNumaNode -gt 0) {
-            $vm.MaxCountPerNumaNode 
-        } else {
-            $LogicalCoresPerNuma 
-        }
+        $effectiveNumaSize = if ($vm.MaxCountPerNumaNode -gt 0) { $vm.MaxCountPerNumaNode } else { $LogicalCoresPerNuma }
         if ($effectiveNumaSize -gt 0 -and -not $vm.ProcReadFailed -and $vcpus -gt $effectiveNumaSize) {
             $findings.Add([pscustomobject]@{
                     Vm      = $vm.Vm
