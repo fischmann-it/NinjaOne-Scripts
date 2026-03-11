@@ -10,10 +10,9 @@ This script collects capacity and health data from Hyper-V hosts and displays it
 
 - Hyper-V host with PowerShell module installed
 - Script must run as **SYSTEM** (default for NinjaOne automations)
+- One WYSIWYG Field
 
 ---
-
-## Setup Instructions
 
 ### Custom Field Requirements
 
@@ -26,7 +25,6 @@ This script collects capacity and health data from Hyper-V hosts and displays it
    - **Inheritance**: Device
    - **Permissions**: Automations:Write, Technician access: Read, API: None (reduce pulling WYSIWYG fields via API, they can be huge)
    - **Advanced Settings**: Recommend expanding large values on render, and adding this field to it's own Custom Field Tab.
-   - **
 4. Click **Save**
 
 ---
