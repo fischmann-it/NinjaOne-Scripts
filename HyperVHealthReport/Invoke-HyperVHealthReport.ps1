@@ -1209,7 +1209,7 @@ $reportBody = @(
                     $drivePct = [math]::Round($_.TotalCommittedVirtualGB / $_.PhysicalDriveCapacityGB * 100, 1)
                     $driveBarColor = Get-AlertColor -Level $_.RowColor
                     $provCommCell = New-HtmlProgressBar `
-                        -Label "$([math]::Round($_.TotalProvisionedVirtualGB,2)) / $([math]::Round($_.TotalCommittedVirtualGB,2)) GB ($drivePct%)" `
+                        -Label "$([math]::Round($_.TotalCommittedVirtualGB,2)) / $([math]::Round($_.TotalProvisionedVirtualGB,2)) GB ($drivePct%)" `
                         -Color $driveBarColor `
                         -Percent $drivePct
                     "<tr class='$($_.RowColor)'><td>$(ConvertTo-HtmlEncoded $_.PhysicalDriveLetter)</td><td>$([math]::Round($_.PhysicalDriveCapacityGB,2)) GB</td><td>$provCommCell</td><td>$([math]::Round($_.NonVmFilesGB,2)) GB</td><td>$([math]::Round($_.HeadroomGB,2)) GB</td></tr>"
