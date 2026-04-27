@@ -124,7 +124,7 @@ if (@('Install', 'Uninstall', 'Reinstall', 'Uninstall And Prevent Reinstallation
         }
         'Uninstall And Prevent Reinstallation' {
             Uninstall-Agent
-            Set-NinjaProperty -Name $env:deploymentBehaviorCustomFieldName -Value 'No AAction' -Type Dropdown
+            Set-NinjaProperty -Name $env:deploymentBehaviorCustomFieldName -Value 'No Action' -Type Dropdown
             Write-Host "Set $env:deploymentBehaviorCustomFieldName to No Action."
         }
         default {
