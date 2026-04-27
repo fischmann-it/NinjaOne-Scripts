@@ -13,7 +13,7 @@ A single Automation/Script is used to Install, Uninstall, Reinstall (when brok
 ## **Automation Library - Script**
 
 - Create a new Script using the template in this directory.
-- Name: <App Name> Agent Management
+- Name: \<App Name> Agent Management
 - Provide a description and categories according to *<your standards and guidelines>*
 - Include the Software category at a minimum.
 - Add a Script Variable
