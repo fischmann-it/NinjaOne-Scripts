@@ -51,7 +51,7 @@ A single Automation/Script is used to Install, Uninstall, Reinstall (when brok
     - Ensure they use a similar naming convention (e.g. \<AppName> Token, \<AppName> Key)
     - Scope them appropriately on the Inheritance screen, it is unlikely a company-wide install key will need to be overridden at the location or device level.
 - Other Fields as Needed
-    - Use a similar naming convention (e.g. \\<AppName> Install Type, \<AppName> Org ID, \<Appname> Region)
+    - Use a similar naming convention (e.g. \<AppName> Install Type, \<AppName> Org ID, \<Appname> Region)
     - Scope them appropriately on the inheritance screen.
 
 ## **Policies**
