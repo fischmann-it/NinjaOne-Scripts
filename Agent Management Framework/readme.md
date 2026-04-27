@@ -27,9 +27,7 @@ A single Automation/Script is used to Install, Uninstall, Reinstall (when brok
     - DO NOT MAKE MANDATORY - running without being set will automatically align with detected Deployment Behavior.
 - Adjust the $env:agentDisplayName and $env:agentServiceName values to reflect the app
     - Display Name is purely for logging purposes
-    - Service Name is the Windows Service , not Display Name.
-        
-        Name
+    - Service Name is the Windows Service Name, not Display Name.
         
 - Adjust the $env:deploymentBehaviorCustomFieldName value to reflect the correct field.
 - Retrieve any other required fields, such as installation tokens and variables at the top of the script using Get-NinjaProperty calls.
