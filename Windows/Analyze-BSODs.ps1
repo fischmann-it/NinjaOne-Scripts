@@ -266,39 +266,39 @@ function ConvertTo-BsodHtml {
         return '<p>No BSOD dump files found on this device.</p>'
     }
 
-    $entries = foreach ($r in $Results) {
-        $fields = [ordered]@{
-            'Bug Check'   = $r.BugCheck
-            'Crash Time'  = $r.CrashTime
-            'Uptime'      = $r.SystemUptimeAtCrashTime
-            'Driver'      = $r.FaultingDriver
-            'Driver Ver'  = $r.DriverVersion
-            'Symbol'      = $r.SymbolName
-            'Process'     = $r.ProcessName
-            'Hardware ID' = $r.HardwareId
-            'Bucket'      = $r.FailureBucket
-            'Args'        = $r.BugCheckArgs
-            'Dump File'   = $r.DumpFile
+    $rows = foreach ($r in $Results) {
+        $crashTime = if ($r.CrashTime) { [System.Net.WebUtility]::HtmlEncode($r.CrashTime) } else { '—' }
+        $bugCheck  = if ($r.BugCheck) { [System.Net.WebUtility]::HtmlEncode($r.BugCheck) } else { '—' }
+        $driver    = if ($r.FaultingDriver) { [System.Net.WebUtility]::HtmlEncode($r.FaultingDriver) } else { '—' }
+        $version   = if ($r.DriverVersion) { [System.Net.WebUtility]::HtmlEncode($r.DriverVersion) } else { '' }
+        $process   = if ($r.ProcessName) { [System.Net.WebUtility]::HtmlEncode($r.ProcessName) } else { '' }
+
+        # Build detail fragments — only include fields that have values
+        $details = @()
+        if ($r.SymbolName)              { $details += "Symbol: $([System.Net.WebUtility]::HtmlEncode($r.SymbolName))" }
+        if ($r.HardwareId)              { $details += "HW: $([System.Net.WebUtility]::HtmlEncode($r.HardwareId))" }
+        if ($r.FailureBucket)           { $details += "Bucket: $([System.Net.WebUtility]::HtmlEncode($r.FailureBucket))" }
+        if ($r.SystemUptimeAtCrashTime) { $details += "Uptime: $([System.Net.WebUtility]::HtmlEncode($r.SystemUptimeAtCrashTime))" }
+        if ($r.BugCheckArgs)            { $details += "Args: $([System.Net.WebUtility]::HtmlEncode($r.BugCheckArgs))" }
+
+        $mainRow = "<tr><td>$crashTime</td><td>$bugCheck</td><td>$driver</td><td>$version</td><td>$process</td></tr>"
+
+        if ($details.Count -gt 0) {
+            $detailRow = "<tr><td colspan=`"5`" style=`"font-size: 0.85em; color: #555; padding-bottom: 6px;`">$($details -join ' | ')</td></tr>"
+            $mainRow + "`n" + $detailRow
+        } else {
+            $mainRow
         }
-
-        $tableRows = foreach ($key in $fields.Keys) {
-            $val = if ($fields[$key]) { [System.Net.WebUtility]::HtmlEncode($fields[$key]) } else { continue }
-            "<tr><td style=`"white-space: nowrap; font-weight: bold; padding-right: 8px;`">$key</td><td style=`"word-break: break-all;`">$val</td></tr>"
-        }
-
-        $title = if ($r.BugCheck) { [System.Net.WebUtility]::HtmlEncode($r.BugCheck) } else { 'Unknown' }
-
-        @"
-<div class="card" style="margin-bottom: 8px;">
-<div class="card-title-box"><div class="card-title"><i class="fas fa-circle-exclamation"></i>&nbsp;&nbsp;$title</div></div>
-<div class="card-body"><table style="width: 100%; border-collapse: collapse;">
-$($tableRows -join "`n")
-</table></div>
-</div>
-"@
     }
 
-    return $entries -join "`n"
+    return @"
+<table>
+<thead><tr><th>Crash Time</th><th>Bug Check</th><th>Driver</th><th>Version</th><th>Process</th></tr></thead>
+<tbody>
+$($rows -join "`n")
+</tbody>
+</table>
+"@
 }
 
 function Invoke-DumpAnalysis {
