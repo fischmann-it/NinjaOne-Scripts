@@ -1298,6 +1298,20 @@ foreach ($v in $csvWarningVolumes) {
     Write-Warning "CSV Warning: $($v.Name) ($($v.Path)) - $($v.PercentFree)% free ($($v.FreeGB) GB of $($v.SizeGB) GB)."
 }
 
+## Replication state checks, These extend the existing replication health checks
+$replicationCriticalStates = @(
+    'Paused',
+    'Suspended',
+    'Error',
+    'FailedOver',
+    'FailOverWaitingCompletion'
+)
+
+$replicationWarningStates = @(
+    'ResynchronizationRequired',
+    'ReadyForInitialReplication'
+)
+
 # Exit code: 0 = healthy, 1 = warning, 2 = critical
 # Each category's contribution is gated by its alert flag.
 # Severity rationale:
@@ -1307,8 +1321,23 @@ $exitChecks = @(
     [pscustomobject]@{ Flag = $alertOnDiskOverprovisioning; Condition = $summary.OverprovisionedDisk; Level = 2 }
     [pscustomobject]@{ Flag = $alertOnRAMOverprovisioning; Condition = $summary.OverprovisionedRAM; Level = 2 }
     [pscustomobject]@{ Flag = $alertOnCPUOverprovisioning; Condition = $summary.OverprovisionedCPU; Level = 1 }
-    [pscustomobject]@{ Flag = $alertOnReplicationCritical; Condition = (@($replicationInfo | Where-Object { $_.Health -eq 'Critical' }).Count -gt 0); Level = 2 }
-    [pscustomobject]@{ Flag = $alertOnReplicationWarning; Condition = (@($replicationInfo | Where-Object { $_.Health -eq 'Warning' }).Count -gt 0); Level = 1 }
+    [pscustomobject]@{
+        Flag = $alertOnReplicationCritical
+        Condition = (@($replicationInfo | Where-Object {
+            $_.Health -eq 'Critical' -or
+            [string]$_.State -in $replicationCriticalStates
+        }).Count -gt 0)
+        Level = 2
+    }
+    
+    [pscustomobject]@{
+        Flag = $alertOnReplicationWarning
+        Condition = (@($replicationInfo | Where-Object {
+            $_.Health -eq 'Warning' -or
+            [string]$_.State -in $replicationWarningStates
+        }).Count -gt 0)
+        Level = 1
+    }
     [pscustomobject]@{ Flag = $alertOnCheckpointCritical; Condition = (@($checkpointFindings | Where-Object { $_.Level -eq 'Critical' }).Count -gt 0); Level = 2 }
     [pscustomobject]@{ Flag = $alertOnCheckpointWarning; Condition = (@($checkpointFindings | Where-Object { $_.Level -eq 'Warning' }).Count -gt 0); Level = 1 }
     [pscustomobject]@{ Flag = $alertOnCSVCritical; Condition = ($csvCriticalVolumes.Count -gt 0); Level = 2 }
@@ -1317,8 +1346,30 @@ $exitChecks = @(
 $exitLevel = 0
 foreach ($check in $exitChecks) {
     if ($check.Flag -and $check.Condition) {
-        $exitLevel = [math]::Max($exitLevel, $check.Level) 
+        $exitLevel = [math]::Max($exitLevel, $check.Level)
     }
 }
+
+#Start - Replication Check States
+$criticalReplicationStateMatches = @(
+    $replicationInfo | Where-Object {
+        [string]$_.State -in $replicationCriticalStates
+    }
+)
+
+$warningReplicationStateMatches = @(
+    $replicationInfo | Where-Object {
+        [string]$_.State -in $replicationWarningStates
+    }
+)
+
+foreach ($r in $criticalReplicationStateMatches) {
+    Write-Output "Replication critical state: VM '$($r.Vm)' State '$($r.State)' Health '$($r.Health)' Mode '$($r.ReplicationMode)'"
+}
+
+foreach ($r in $warningReplicationStateMatches) {
+    Write-Output "Replication warning state: VM '$($r.Vm)' State '$($r.State)' Health '$($r.Health)' Mode '$($r.ReplicationMode)'"
+}
+#End - Replication Check States
 
 exit $exitLevel
