@@ -1,9 +1,11 @@
 ---
 name: ninjaone-wysiwyg
-description: Use when code sets WYSIWYG custom fields, builds HTML reports for NinjaOne, uses NinjaOne CSS classes (card, info-card, stat-card), Charts.css in NinjaOne context, or user asks about formatting NinjaOne WYSIWYG fields.
+description: HTML formatting, inline styling, Font Awesome 6 icons, Charts.css data visualization, and optional Bootstrap 5 grid for NinjaOne WYSIWYG custom fields. Use when creating visual reports, formatted documentation, status dashboards, data charts, or styled content in custom fields. Supports cards, tables, info cards, stat cards, buttons, tags, and responsive layouts with allowlist-based HTML/CSS security.
 ---
 
 # NinjaOne WYSIWYG Fields
+
+> ⚠️ **Critical:** HTML styling in WYSIWYG custom fields **must be applied via the API or CLI**. The NinjaOne console editor does not support inline styles, NinjaOne CSS classes, or any of the HTML patterns described in this skill. Always generate and write HTML content programmatically (e.g. via `Set-NinjaProperty` or the REST API).
 
 NinjaOne WYSIWYG fields support HTML, inline styling, Font Awesome 6 icons, Charts.css for data visualization, and optional Bootstrap 5 grid layouts.
 
@@ -22,9 +24,9 @@ NinjaOne WYSIWYG fields support HTML, inline styling, Font Awesome 6 icons, Char
 - **Character Limit:** Maximum 200,000 characters per field
 - **Auto-Collapse:** Fields > 10,000 characters collapse automatically
 - **Field Limit:** Maximum 20 WYSIWYG fields per form/template
-- **Styling:** HTML and inline styles applied via API/CLI only
+- **Styling:** HTML and inline styles **must be applied via API or CLI** — the NinjaOne console editor does not support styled HTML
 - **Allowlist-Based:** Only specific HTML elements and styles permitted
-- **Editor:** WYSIWYG editor available in NinjaOne console for Knowledge Base
+- **Editor:** WYSIWYG editor available in NinjaOne console for Knowledge Base (Docs) only — not for custom fields
 
 ## Related Skills
 
@@ -45,39 +47,85 @@ NinjaOne WYSIWYG fields support HTML, inline styling, Font Awesome 6 icons, Char
 
 ## Allowed Inline Styles
 
-- **Color:** `color`, `background-color`
-- **Layout:** `display`, `justify-content`, `align-items`, `text-align`, `box-sizing`
-- **Sizing:** `width`, `height`, `font-size`
-- **Spacing:** `margin`, `padding` (and directional variants: `-top`, `-right`, `-bottom`, `-left`)
-- **Borders:** `border-width`, `border-style`, `border-color`, `border-radius`, `border-collapse`
-- **Border Directional:** `border-top`, `border-right`, `border-bottom`, `border-left`
-- **Text:** `word-break`, `white-space`, `overflow-wrap`, `font-family`
+> Source: Official NinjaOne WYSIWYG documentation (ninja_wysiwyg.txt)
 
-### Value Examples
+| Style | Allowed Values |
+|---|---|
+| `color` | RGB or hex (`rgb(240,30,50,.7)`, `#f015ca`) |
+| `background-color` | RGB or hex |
+| `display` | `block`, `inline`, `inline-block`, `flex`, `inline-flex` |
+| `justify-content` | `center`, `start`, `end`, `flex`, `flex-start`, `flex-end`, `left`, `right`, `normal`, `space-between`, `space-around`, `space-evenly` |
+| `align-items` | `center`, `start`, `end`, `flex`, `flex-start`, `flex-end`, `left`, `right`, `normal`, `stretch` |
+| `text-align` | `start`, `end`, `left`, `center`, `right`, `justify`, `justify-all`, `match-parent` |
+| `word-break` | `normal`, `break-all`, `keep-all`, `break-word` |
+| `white-space` | `normal`, `no-wrap`, `pre`, `pre-wrap`, `pre-line`, `break-spaces` |
+| `overflow-wrap` | `normal`, `break-word`, `pre`, `anywhere` |
+| `box-sizing` | `border-box`, `content-box` |
+| `font-size` | Any valid CSS unit (`100%`, `18px`, `2em`, etc.) |
+| `font-family` | `serif`, `sans-serif`, `monospace`, `cursive`, `fantasy`, `system-ui`, `emoji` |
+| `width` / `height` | Any valid CSS unit (`100%`, `400px`, `auto`, `2em`, etc.) |
+| `margin` / `margin-top/right/bottom/left` | Any valid CSS unit |
+| `padding` / `padding-top/right/bottom/left` | Any valid CSS unit |
+| `border-width` | Any valid CSS unit |
+| `border-style` | `none`, `solid`, `dashed`, `inset`, `outset` |
+| `border-color` | RGB or hex |
+| `border-top/right/bottom/left` | Any valid CSS unit |
+| `border-radius` | Any valid CSS unit |
+| `border-collapse` | `collapse`, `separate` |
 
-```powershell
-# Colors: RGB or hex
-style="color: #f015ca; background-color: rgb(240,30,50,0.7);"
-
-# Layout
-style="display: flex; justify-content: space-between; align-items: center;"
-
-# Sizing: Valid CSS units
-style="width: 100%; height: 400px; font-size: 2em;"
-
-# Font families
-style="font-family: sans-serif;"  # Options: serif, sans-serif, monospace, cursive, fantasy, system-ui, emoji
-
-# Borders
-style="border: 2px solid #ccc; border-radius: 5px; border-collapse: collapse;"
-```
+> **Note:** `grid` is NOT in the allowed `display` values. Use `flex` for layout instead.
+> `white-space: no-wrap` uses a hyphen (NinjaOne's listed form); standard CSS is `nowrap`.
 
 ## NinjaOne CSS Classes
+
+### Card Width
+
+NinjaOne's rendering context acts as a Bootstrap container, so `row`/`col-*` classes work
+directly inside WYSIWYG field content — no explicit `<div class="container">` wrapper is needed
+or allowed.
+
+For a **single full-width card**, wrap it in `row` → `col-12 d-flex`. The `d-flex` class is
+required to make `flex-grow-1` work — without a flex parent, `flex-grow-1` is ignored:
+
+```powershell
+# Single full-width card
+$html = @"
+<div class="row"><div class="col-12 d-flex">
+<div class="card flex-grow-1">
+  <div class="card-title-box">
+    <div class="card-title"><i class="fas fa-server"></i>&nbsp;&nbsp;Status</div>
+  </div>
+  <div class="card-body">
+    Content here
+  </div>
+</div>
+</div></div>
+"@
+```
+
+For **multiple cards side by side**, use Bootstrap's grid inside the field (no container needed):
+
+```powershell
+# Multi-card grid layout
+$html = @"
+<div class="row g-3">
+  <div class="col-xl-6 col-md-12 d-flex">
+    <div class="card flex-grow-1">...</div>
+  </div>
+  <div class="col-xl-6 col-md-12 d-flex">
+    <div class="card flex-grow-1">...</div>
+  </div>
+</div>
+"@
+```
+
+The card column span (how wide the form column itself is) is configured in the NinjaOne
+form/template editor and cannot be changed from script output.
 
 ### Cards
 
 ```powershell
-# Standard card
+# Standard card (use row/col-12 wrapper above for full-width)
 $card = @"
 <div class="card flex-grow-1">
   <div class="card-title-box">
@@ -117,6 +165,8 @@ $table = @"
     <tr class="success"><td>Web Server</td><td>Running</td></tr>
     <tr class="danger"><td>Database</td><td>Stopped</td></tr>
     <tr class="warning"><td>Mail</td><td>Degraded</td></tr>
+    <tr class="other"><td>Backup</td><td>Skipped</td></tr>
+    <tr class="unknown"><td>Monitor</td><td>Unknown</td></tr>
   </tbody>
 </table>
 "@
@@ -124,7 +174,21 @@ $table = @"
 
 ### Info Cards
 
+> **Important:** The `<i class="info-icon ...">` element is a **required structural part** of the
+> `info-card` component. Omitting it leaves a visual gap in the layout. Always include the icon.
+
 ```powershell
+# Informational (default — no modifier class)
+$info = @"
+<div class="info-card">
+  <i class="info-icon fa-solid fa-circle-info"></i>
+  <div class="info-text">
+    <div class="info-title">Informational title</div>
+    <div class="info-description">Description text here.</div>
+  </div>
+</div>
+"@
+
 # Success
 $success = @"
 <div class="info-card success">
@@ -253,7 +317,7 @@ $columnChart = @"
     <tr><td style="--size: 0.75"><span class="data">75%</span></td></tr>
   </tbody>
 </table>
-"@
+"@"
 ```
 
 ### Bar Chart
@@ -266,7 +330,7 @@ $barChart = @"
     <tr><td style="--size: 0.6"><span class="data">60%</span></td></tr>
   </tbody>
 </table>
-"@
+"@"
 ```
 
 ### Pie Chart
@@ -281,7 +345,7 @@ $pieChart = @"
     </tbody>
   </table>
 </div>
-"@
+"@"
 ```
 
 ### Line Chart
@@ -331,7 +395,7 @@ $areaChart = @"
     </tr>
   </tbody>
 </table>
-"@
+"@"
 ```
 
 ### Chart Modifiers
@@ -359,11 +423,11 @@ Bootstrap's grid system is available for complex responsive layouts when needed.
 | Breakpoint | Size | Class Prefix |
 |------------|------|--------------|
 | Extra small (xs) | <576px | `.col-` |
-| Small (sm) | >=576px | `.col-sm-` |
-| Medium (md) | >=768px | `.col-md-` |
-| Large (lg) | >=992px | `.col-lg-` |
-| Extra large (xl) | >=1200px | `.col-xl-` |
-| Extra extra large (xxl) | >=1400px | `.col-xxl-` |
+| Small (sm) | ≥576px | `.col-sm-` |
+| Medium (md) | ≥768px | `.col-md-` |
+| Large (lg) | ≥992px | `.col-lg-` |
+| Extra large (xl) | ≥1200px | `.col-xl-` |
+| Extra extra large (xxl) | ≥1400px | `.col-xxl-` |
 
 ### Basic Grid Examples
 
@@ -377,7 +441,7 @@ $html = @"
     <div class="col">Column 3</div>
   </div>
 </div>
-"@
+"@"
 
 # Responsive: stacked mobile, horizontal tablet+
 $html = @"
@@ -387,7 +451,7 @@ $html = @"
     <div class="col-sm-4">Sidebar</div>
   </div>
 </div>
-"@
+"@"
 
 # Mixed breakpoints
 $html = @"
@@ -395,7 +459,7 @@ $html = @"
   <div class="col-6 col-md-4">Responsive column</div>
   <div class="col-6 col-md-8">Another column</div>
 </div>
-"@
+"@"
 ```
 
 ### Row Columns
@@ -413,7 +477,7 @@ $html = @"
     <div class="col">Column</div>
   </div>
 </div>
-"@
+"@"
 
 # Responsive columns: 1 on mobile, 2 on small, 4 on medium+
 $html = @"
@@ -423,7 +487,7 @@ $html = @"
   <div class="col">Column</div>
   <div class="col">Column</div>
 </div>
-"@
+"@"
 
 # Auto-width columns
 $html = @"
@@ -432,7 +496,7 @@ $html = @"
   <div class="col">Column</div>
   <div class="col">Column</div>
 </div>
-"@
+"@"
 ```
 
 ### Nesting
@@ -449,23 +513,23 @@ $html = @"
     </div>
   </div>
 </div>
-"@
+"@"
 ```
 
 ### Gutters
 
 ```powershell
 # No gutters
-$html = @"<div class="row g-0"><div class="col">No spacing</div></div>"@
+$html = @"<div class="row g-0"><div class="col">No spacing</div></div>"@"
 
 # Custom gutters
-$html = @"<div class="row g-3"><div class="col">3 spacing</div></div>"@
+$html = @"<div class="row g-3"><div class="col">3 spacing</div></div>"@"
 
 # Horizontal only
-$html = @"<div class="row gx-5"><div class="col">Horizontal spacing</div></div>"@
+$html = @"<div class="row gx-5"><div class="col">Horizontal spacing</div></div>"@"
 
 # Vertical only
-$html = @"<div class="row gy-3"><div class="col">Vertical spacing</div></div>"@
+$html = @"<div class="row gy-3"><div class="col">Vertical spacing</div></div>"@"
 ```
 
 ### Additional Grid Utilities
@@ -493,7 +557,7 @@ $html = @"
 <div class="card">
   <div class="card-body">Large content here...</div>
 </div>
-"@
+"@"
 
 # Pipe to NinjaOne field
 $html | Ninja-Property-Set-Piped "FieldName"
@@ -518,7 +582,7 @@ $memoryPercent = [math]::Round((($os.TotalVisibleMemorySize - $os.FreePhysicalMe
 # Build HTML using simple inline styling
 $html = @"
 <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-
+  
   <!-- Overview Card -->
   <div class="card flex-grow-1" style="min-width: 300px;">
     <div class="card-title-box">
@@ -530,7 +594,7 @@ $html = @"
       <p><b>Uptime:</b> $([math]::Round((New-TimeSpan -Start $os.LastBootUpTime).TotalDays, 2)) days</p>
     </div>
   </div>
-
+  
   <!-- Resource Usage -->
   <div class="card flex-grow-1" style="min-width: 300px;">
     <div class="card-title-box">
@@ -545,7 +609,7 @@ $html = @"
       </table>
     </div>
   </div>
-
+  
 </div>
 "@
 
@@ -559,21 +623,14 @@ exit 0
 
 1. **HTML/CSS First** - Use inline styles and flexbox for simple layouts
 2. **NinjaOne Classes** - Leverage built-in card, table, and info card styles
-3. **Meaningful Icons** - Font Awesome icons provide visual context
-4. **Status Indicators** - Color-coded rows and info cards for quick scanning
-5. **Character Limits** - Stay under 200,000; optimize for 10,000
-6. **Sanitize Input** - Escape HTML characters in user data
-7. **Charts for Data** - Use Charts.css for visual data representation
-8. **Piped Data** - Use for large content (via CLI)
-9. **Test Rendering** - Verify in NinjaOne before production
-10. **Semantic HTML** - Use appropriate heading levels and semantic elements
-11. **Accessibility** - Include meaningful text for icons and links
-12. **Grid When Needed** - Use Bootstrap grid for complex responsive requirements
-
-## Common Mistakes
-
-1. **Broken here-string delimiters** - The closing `"@` must be at the start of a line with no leading spaces or trailing characters. `"@"` is incorrect and causes a parse error.
-2. **Unsupported HTML elements** - Elements like `<img>`, `<script>`, `<style>`, `<iframe>` are silently stripped by NinjaOne's sanitizer. Only elements from the allowlist render.
-3. **Unsupported CSS properties** - Properties like `flex-wrap`, `gap`, `overflow`, `position` are not in the allowlist and will be stripped silently — use supported alternatives like `display: flex` with `justify-content`.
-4. **Inline styles on `<code>` and `<pre>`** - These elements do not support NinjaOne CSS classes; use `<span>` or `<div>` wrappers instead.
-5. **Exceeding 10,000 characters without piping** - Fields over 10,000 characters auto-collapse. For large reports, use `Ninja-Property-Set-Piped` via CLI to avoid truncation issues.
+3. **Card Width is a Form Setting** - WYSIWYG field column span is set in the NinjaOne form template editor. Use `flex-grow-1` on the card; use `row`/`col-*` (no container wrapper needed) for multi-card side-by-side layouts
+4. **Meaningful Icons** - Font Awesome icons provide visual context; limit to card titles and key indicators to avoid visual clutter
+5. **Status Indicators** - Color-coded rows and info cards for quick scanning
+6. **Character Limits** - Stay under 200,000; optimize for 10,000
+7. **Sanitize Input** - Escape HTML characters in user data
+8. **Charts for Data** - Use Charts.css for visual data representation
+9. **Piped Data** - Use for large content (via CLI)
+10. **Test Rendering** - Verify in NinjaOne before production
+11. **Semantic HTML** - Use appropriate heading levels and semantic elements
+12. **Accessibility** - Include meaningful text for icons and links
+13. **Grid When Needed** - Use Bootstrap grid for complex responsive requirements
