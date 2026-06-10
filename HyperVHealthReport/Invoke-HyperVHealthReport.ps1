@@ -5,9 +5,16 @@
     Hyper-V host health report for NinjaOne — checks disk, RAM, CPU, replication, checkpoint, and cluster storage health.
 
 .DESCRIPTION
-    Collects capacity and health data from a Hyper-V host and writes an HTML summary card to the
-    NinjaOne WYSIWYG custom field 'hypervHealth'. Can be used as a NinjaOne Condition (exit-code based)
-    or as a scheduled Automation to keep the custom field current.
+    Collects capacity and health data from a Hyper-V host. Supports two operation modes:
+
+    Automation mode ($writeHtmlReport = $true, default):
+      Generates a full HTML report and writes it to the NinjaOne WYSIWYG custom field 'hypervHealth'.
+      Use on a scheduled Automation to keep the field current.
+
+    Condition mode ($writeHtmlReport = $false):
+      Skips HTML generation and field writes entirely — only evaluates exit codes and writes
+      console warnings. Use when deploying as a NinjaOne Condition to avoid redundant field updates
+      on every polling cycle.
 
     Checks performed:
       - Disk: flags drives where provisioned virtual space leaves less than $diskWarnThresholdGB GB headroom
@@ -144,6 +151,9 @@ $csvWarnThresholdPct = Get-EnvWithDefault -Name 'csvWarnThresholdPct' -Default 1
 $csvCritThresholdPct = Get-EnvWithDefault -Name 'csvCritThresholdPct' -Default 5 -Type ([int])
 $alertOnCSVWarning = Get-EnvWithDefault -Name 'alertOnCSVWarning' -Default $false -Type ([bool])
 $alertOnCSVCritical = Get-EnvWithDefault -Name 'alertOnCSVCritical' -Default $true -Type ([bool])
+
+# Operation mode: set to $false when running as a Condition to skip HTML generation and field writes
+$writeHtmlReport = Get-EnvWithDefault -Name 'writeHtmlReport' -Default $true -Type ([bool])
 
 # --- Helper Functions ---
 
@@ -375,14 +385,14 @@ function New-HyperVWarningsSectionHtml {
     }
 
     foreach ($r in @($ReplicationInfo | Where-Object {
-        $_.Health -in 'Warning', 'Critical' -or
-        $_.State -in $ReplicationCriticalStates -or
-        $_.State -in $ReplicationWarningStates
-    })) {
+                $_.Health -in 'Warning', 'Critical' -or
+                $_.State -in $ReplicationCriticalStates -or
+                $_.State -in $ReplicationWarningStates
+            })) {
         $isCritical = $r.Health -eq 'Critical' -or $r.State -in $ReplicationCriticalStates
         $level = if ($isCritical) { 'error' } else { 'warning' }
         $severity = if ($isCritical) { 'Critical' } else { 'Warning' }
-        $items.Add((New-HtmlInfoCard -Level $level -Title "Replication $severity: $(ConvertTo-HtmlEncoded $r.Vm)" -Description "State: $(ConvertTo-HtmlEncoded $r.State)"))
+        $items.Add((New-HtmlInfoCard -Level $level -Title "Replication $severity`: $(ConvertTo-HtmlEncoded $r.Vm)" -Description "State: $(ConvertTo-HtmlEncoded $r.State)"))
     }
 
     # Info-level CPU/NUMA findings (e.g. processor flags, CPU caps) are intentionally excluded
@@ -1090,206 +1100,210 @@ $checkpointFindings = @(Get-CheckpointFindings -AllVMs $allVMs `
         -WarnSizeGB $checkpointWarnSizeGB -CritSizeGB $checkpointCritSizeGB `
         -WarnChainDepth $checkpointWarnChainDepth -CritChainDepth $checkpointCritChainDepth)
 
-# Pre-process replication rows (sorting + age/frequency labels)
-$replNow = Get-Date
-$sortedRepl = @($replicationInfo | Sort-Object {
-        switch ($_.Health) {
-            'Critical' {
-                0 
-            } 'Warning' {
-                1 
-            } default {
-                2 
-            } 
-        }
-    }, {
-        if ($_.LastReplicationTime) {
-            $_.LastReplicationTime 
-        } else {
-            [datetime]::MinValue 
-        }
-    })
-$replRows = if ($replicationInfo) {
-    @(
-        $sortedRepl | ForEach-Object {
-            $rowClass = switch ($_.Health) {
+if ($writeHtmlReport) {
+    # Pre-process replication rows (sorting + age/frequency labels)
+    $replNow = Get-Date
+    $sortedRepl = @($replicationInfo | Sort-Object {
+            switch ($_.Health) {
                 'Critical' {
-                    'danger' 
+                    0 
                 } 'Warning' {
-                    'warning' 
+                    1 
                 } default {
-                    'success' 
-                }
+                    2 
+                } 
             }
-            $lastReplAge = if ($_.LastReplicationTime) {
-                $span = $replNow - $_.LastReplicationTime
-                if ($span.TotalDays -ge 1) {
-                    "$([math]::Round($span.TotalDays, 1)) days ago" 
-                } elseif ($span.TotalHours -ge 1) {
-                    "$([math]::Round($span.TotalHours, 1)) hrs ago" 
-                } else {
-                    "$([math]::Round($span.TotalMinutes, 0)) min ago" 
-                }
+        }, {
+            if ($_.LastReplicationTime) {
+                $_.LastReplicationTime 
             } else {
-                'Never' 
+                [datetime]::MinValue 
             }
-            $freqLabel = switch ($_.FrequencyOfReplicationSec) {
-                30 {
-                    '30 sec' 
-                } 300 {
-                    '5 min' 
-                } 900 {
-                    '15 min' 
-                } default {
-                    "$($_.FrequencyOfReplicationSec) sec" 
+        })
+    $replRows = if ($replicationInfo) {
+        @(
+            $sortedRepl | ForEach-Object {
+                $rowClass = switch ($_.Health) {
+                    'Critical' {
+                        'danger' 
+                    } 'Warning' {
+                        'warning' 
+                    } default {
+                        'success' 
+                    }
                 }
+                $lastReplAge = if ($_.LastReplicationTime) {
+                    $span = $replNow - $_.LastReplicationTime
+                    if ($span.TotalDays -ge 1) {
+                        "$([math]::Round($span.TotalDays, 1)) days ago" 
+                    } elseif ($span.TotalHours -ge 1) {
+                        "$([math]::Round($span.TotalHours, 1)) hrs ago" 
+                    } else {
+                        "$([math]::Round($span.TotalMinutes, 0)) min ago" 
+                    }
+                } else {
+                    'Never' 
+                }
+                $freqLabel = switch ($_.FrequencyOfReplicationSec) {
+                    30 {
+                        '30 sec' 
+                    } 300 {
+                        '5 min' 
+                    } 900 {
+                        '15 min' 
+                    } default {
+                        "$($_.FrequencyOfReplicationSec) sec" 
+                    }
+                }
+                "<tr class='$rowClass'><td>$(ConvertTo-HtmlEncoded $_.Vm)</td><td>$(ConvertTo-HtmlEncoded $_.Health)</td><td>$(ConvertTo-HtmlEncoded $_.State)</td><td>$(ConvertTo-HtmlEncoded $_.ReplicationMode)</td><td>$freqLabel</td><td>$(ConvertTo-HtmlEncoded $lastReplAge)</td></tr>"
             }
-            "<tr class='$rowClass'><td>$(ConvertTo-HtmlEncoded $_.Vm)</td><td>$(ConvertTo-HtmlEncoded $_.Health)</td><td>$(ConvertTo-HtmlEncoded $_.State)</td><td>$(ConvertTo-HtmlEncoded $_.ReplicationMode)</td><td>$freqLabel</td><td>$(ConvertTo-HtmlEncoded $lastReplAge)</td></tr>"
-        }
-        $unreplicatedVms | ForEach-Object {
-            "<tr><td>$(ConvertTo-HtmlEncoded $_.Name)</td><td>Not configured</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>"
-        }
-    ) -join "`n"
-} else {
-    $null 
-}
+            $unreplicatedVms | ForEach-Object {
+                "<tr><td>$(ConvertTo-HtmlEncoded $_.Name)</td><td>Not configured</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>"
+            }
+        ) -join "`n"
+    } else {
+        $null
+    }
+} # end if ($writeHtmlReport) — replication HTML pre-processing
 
 # --- Report generation ---
 
-$reportBody = @(
-    New-HyperVWarningsSectionHtml -Summary $summary -ReplicationInfo $replicationInfo `
-        -CpuNumaFindings $cpuNumaFindings -CheckpointFindings $checkpointFindings `
-        -CsvData $csvData -CsvCritThresholdPct $csvCritThresholdPct `
-        -CsvWarnThresholdPct $csvWarnThresholdPct `
-        -ReplicationCriticalStates $replicationCriticalStates `
-        -ReplicationWarningStates $replicationWarningStates
+if ($writeHtmlReport) {
+    $reportBody = @(
+        New-HyperVWarningsSectionHtml -Summary $summary -ReplicationInfo $replicationInfo `
+            -CpuNumaFindings $cpuNumaFindings -CheckpointFindings $checkpointFindings `
+            -CsvData $csvData -CsvCritThresholdPct $csvCritThresholdPct `
+            -CsvWarnThresholdPct $csvWarnThresholdPct `
+            -ReplicationCriticalStates $replicationCriticalStates `
+            -ReplicationWarningStates $replicationWarningStates
 
-    # Resource Report
-    New-HtmlTable -Title 'Resource Report' -Icon 'fas fa-gauge-high' `
-        -Headers @('Resource', 'Allocation', 'Available Headroom') `
-        -Rows ((@(
-                # RAM (Assigned - Live)
-                $ramAssignedPct = if ($summary.TotalHostMemoryGB -gt 0) {
-                    [math]::Round($summary.TotalAssignedRAMGB / $summary.TotalHostMemoryGB * 100, 1)
-                } else {
-                    0 
-                }
-                $ramAssignedBar = New-HtmlProgressBar `
-                    -Label "$([math]::Round($summary.TotalAssignedRAMGB,2)) / $([math]::Round($summary.TotalHostMemoryGB,2)) GB ($ramAssignedPct%)" `
-                    -Color (Get-ProgressBarColor -Percent $ramAssignedPct) `
-                    -Percent $ramAssignedPct
-                "<tr><td>RAM (Assigned - Live)</td><td>$ramAssignedBar</td><td>$([math]::Round($summary.TotalHostMemoryGB - $summary.TotalAssignedRAMGB, 2)) GB free</td></tr>"
-                # RAM (Startup - All VMs)
-                $ramStartupPct = if ($summary.TotalHostMemoryGB -gt 0) {
-                    [math]::Round($summary.TotalStartupRAMGB / $summary.TotalHostMemoryGB * 100, 1)
-                } else {
-                    0 
-                }
-                $ramStartupBar = New-HtmlProgressBar `
-                    -Label "$([math]::Round($summary.TotalStartupRAMGB,2)) / $([math]::Round($summary.TotalHostMemoryGB,2)) GB ($ramStartupPct%)" `
-                    -Color (Get-ProgressBarColor -Percent $ramStartupPct) `
-                    -Percent $ramStartupPct
-                "<tr><td>RAM (Startup - All VMs)</td><td>$ramStartupBar</td><td>$([math]::Round($summary.TotalHostMemoryGB - $summary.TotalStartupRAMGB, 2)) GB free</td></tr>"
-                # CPU (Assigned - Live)
-                $cpuLivePct = if ($summary.TotalHostCores -gt 0) {
-                    [math]::Round($summary.TotalLiveCPUs / $summary.TotalHostCores * 100, 1)
-                } else {
-                    0 
-                }
-                $cpuLiveBar = New-HtmlProgressBar `
-                    -Label "$($summary.TotalLiveCPUs) / $($summary.TotalHostCores) CPUs ($cpuLivePct%)" `
-                    -Color (Get-ProgressBarColor -Percent $cpuLivePct) `
-                    -Percent $cpuLivePct
-                "<tr><td>CPU (Assigned - Live)</td><td>$cpuLiveBar</td><td>$($summary.TotalHostCores - $summary.TotalLiveCPUs) cores free</td></tr>"
-                # CPU (All VMs)
-                $cpuAllPct = if ($summary.TotalHostCores -gt 0) {
-                    [math]::Round($summary.TotalAssignedCPUs / $summary.TotalHostCores * 100, 1)
-                } else {
-                    0 
-                }
-                $cpuAllBar = New-HtmlProgressBar `
-                    -Label "$($summary.TotalAssignedCPUs) / $($summary.TotalHostCores) CPUs ($cpuAllPct%)" `
-                    -Color (Get-ProgressBarColor -Percent $cpuAllPct) `
-                    -Percent $cpuAllPct
-                "<tr><td>CPU (All VMs)</td><td>$cpuAllBar</td><td>$($summary.TotalHostCores - $summary.TotalAssignedCPUs) cores free</td></tr>"
-            ) | Where-Object { $_ -match '^<tr' }) -join "`n")
+        # Resource Report
+        New-HtmlTable -Title 'Resource Report' -Icon 'fas fa-gauge-high' `
+            -Headers @('Resource', 'Allocation', 'Available Headroom') `
+            -Rows ((@(
+                    # RAM (Assigned - Live)
+                    $ramAssignedPct = if ($summary.TotalHostMemoryGB -gt 0) {
+                        [math]::Round($summary.TotalAssignedRAMGB / $summary.TotalHostMemoryGB * 100, 1)
+                    } else {
+                        0 
+                    }
+                    $ramAssignedBar = New-HtmlProgressBar `
+                        -Label "$([math]::Round($summary.TotalAssignedRAMGB,2)) / $([math]::Round($summary.TotalHostMemoryGB,2)) GB ($ramAssignedPct%)" `
+                        -Color (Get-ProgressBarColor -Percent $ramAssignedPct) `
+                        -Percent $ramAssignedPct
+                    "<tr><td>RAM (Assigned - Live)</td><td>$ramAssignedBar</td><td>$([math]::Round($summary.TotalHostMemoryGB - $summary.TotalAssignedRAMGB, 2)) GB free</td></tr>"
+                    # RAM (Startup - All VMs)
+                    $ramStartupPct = if ($summary.TotalHostMemoryGB -gt 0) {
+                        [math]::Round($summary.TotalStartupRAMGB / $summary.TotalHostMemoryGB * 100, 1)
+                    } else {
+                        0 
+                    }
+                    $ramStartupBar = New-HtmlProgressBar `
+                        -Label "$([math]::Round($summary.TotalStartupRAMGB,2)) / $([math]::Round($summary.TotalHostMemoryGB,2)) GB ($ramStartupPct%)" `
+                        -Color (Get-ProgressBarColor -Percent $ramStartupPct) `
+                        -Percent $ramStartupPct
+                    "<tr><td>RAM (Startup - All VMs)</td><td>$ramStartupBar</td><td>$([math]::Round($summary.TotalHostMemoryGB - $summary.TotalStartupRAMGB, 2)) GB free</td></tr>"
+                    # CPU (Assigned - Live)
+                    $cpuLivePct = if ($summary.TotalHostCores -gt 0) {
+                        [math]::Round($summary.TotalLiveCPUs / $summary.TotalHostCores * 100, 1)
+                    } else {
+                        0 
+                    }
+                    $cpuLiveBar = New-HtmlProgressBar `
+                        -Label "$($summary.TotalLiveCPUs) / $($summary.TotalHostCores) CPUs ($cpuLivePct%)" `
+                        -Color (Get-ProgressBarColor -Percent $cpuLivePct) `
+                        -Percent $cpuLivePct
+                    "<tr><td>CPU (Assigned - Live)</td><td>$cpuLiveBar</td><td>$($summary.TotalHostCores - $summary.TotalLiveCPUs) cores free</td></tr>"
+                    # CPU (All VMs)
+                    $cpuAllPct = if ($summary.TotalHostCores -gt 0) {
+                        [math]::Round($summary.TotalAssignedCPUs / $summary.TotalHostCores * 100, 1)
+                    } else {
+                        0 
+                    }
+                    $cpuAllBar = New-HtmlProgressBar `
+                        -Label "$($summary.TotalAssignedCPUs) / $($summary.TotalHostCores) CPUs ($cpuAllPct%)" `
+                        -Color (Get-ProgressBarColor -Percent $cpuAllPct) `
+                        -Percent $cpuAllPct
+                    "<tr><td>CPU (All VMs)</td><td>$cpuAllBar</td><td>$($summary.TotalHostCores - $summary.TotalAssignedCPUs) cores free</td></tr>"
+                ) | Where-Object { $_ -match '^<tr' }) -join "`n")
 
-    # Physical Drives (hidden when all VHDs are on CSVs)
-    if ($physicalDrives) {
-        New-HtmlTable -Title 'Physical Drives' -Icon 'fas fa-hard-drive' `
-            -Headers @('Drive', 'Capacity', 'Committed / Provisioned', 'Other Files', 'Free (GB)') `
-            -Rows (($physicalDrives | ForEach-Object {
-                    $drivePct = [math]::Round($_.TotalCommittedVirtualGB / $_.PhysicalDriveCapacityGB * 100, 1)
-                    $driveBarColor = Get-AlertColor -Level $_.RowColor
-                    $provCommCell = New-HtmlProgressBar `
-                        -Label "$([math]::Round($_.TotalCommittedVirtualGB,2)) / $([math]::Round($_.TotalProvisionedVirtualGB,2)) GB ($drivePct%)" `
-                        -Color $driveBarColor `
-                        -Percent $drivePct
-                    "<tr class='$($_.RowColor)'><td>$(ConvertTo-HtmlEncoded $_.PhysicalDriveLetter)</td><td>$([math]::Round($_.PhysicalDriveCapacityGB,2)) GB</td><td>$provCommCell</td><td>$([math]::Round($_.NonVmFilesGB,2)) GB</td><td>$([math]::Round($_.HeadroomGB,2)) GB</td></tr>"
-                }) -join "`n")
-    }
+        # Physical Drives (hidden when all VHDs are on CSVs)
+        if ($physicalDrives) {
+            New-HtmlTable -Title 'Physical Drives' -Icon 'fas fa-hard-drive' `
+                -Headers @('Drive', 'Capacity', 'Committed / Provisioned', 'Other Files', 'Free (GB)') `
+                -Rows (($physicalDrives | ForEach-Object {
+                        $drivePct = [math]::Round($_.TotalCommittedVirtualGB / $_.PhysicalDriveCapacityGB * 100, 1)
+                        $driveBarColor = Get-AlertColor -Level $_.RowColor
+                        $provCommCell = New-HtmlProgressBar `
+                            -Label "$([math]::Round($_.TotalCommittedVirtualGB,2)) / $([math]::Round($_.TotalProvisionedVirtualGB,2)) GB ($drivePct%)" `
+                            -Color $driveBarColor `
+                            -Percent $drivePct
+                        "<tr class='$($_.RowColor)'><td>$(ConvertTo-HtmlEncoded $_.PhysicalDriveLetter)</td><td>$([math]::Round($_.PhysicalDriveCapacityGB,2)) GB</td><td>$provCommCell</td><td>$([math]::Round($_.NonVmFilesGB,2)) GB</td><td>$([math]::Round($_.HeadroomGB,2)) GB</td></tr>"
+                    }) -join "`n")
+        }
 
-    # Cluster Shared Volumes (clustered hosts only)
-    if ($isClustered) {
-        New-HtmlTable -Title 'Cluster Shared Volumes' -Icon 'fas fa-server' `
-            -Headers @('CSV Name', 'Volume Path', 'Owner Node', 'Capacity (GB)', 'Used / Total', 'Free (GB)') `
-            -Rows (($csvData | ForEach-Object {
-                    $csvUsedPct = [math]::Round(100 - $_.PercentFree, 1)
-                    $csvBarColor = Get-AlertColor -Level $_.RowColor
-                    $csvUsageBar = New-HtmlProgressBar `
-                        -Label "$($_.UsedGB) / $($_.SizeGB) GB ($($_.PercentFree)% free)" `
-                        -Color $csvBarColor `
-                        -Percent $csvUsedPct
-                    "<tr class='$($_.RowColor)'><td>$(ConvertTo-HtmlEncoded $_.Name)</td><td>$(ConvertTo-HtmlEncoded $_.Path)</td><td>$(ConvertTo-HtmlEncoded $_.OwnerNode)</td><td>$($_.SizeGB)</td><td>$csvUsageBar</td><td>$($_.FreeGB) GB</td></tr>"
+        # Cluster Shared Volumes (clustered hosts only)
+        if ($isClustered) {
+            New-HtmlTable -Title 'Cluster Shared Volumes' -Icon 'fas fa-server' `
+                -Headers @('CSV Name', 'Volume Path', 'Owner Node', 'Capacity (GB)', 'Used / Total', 'Free (GB)') `
+                -Rows (($csvData | ForEach-Object {
+                        $csvUsedPct = [math]::Round(100 - $_.PercentFree, 1)
+                        $csvBarColor = Get-AlertColor -Level $_.RowColor
+                        $csvUsageBar = New-HtmlProgressBar `
+                            -Label "$($_.UsedGB) / $($_.SizeGB) GB ($($_.PercentFree)% free)" `
+                            -Color $csvBarColor `
+                            -Percent $csvUsedPct
+                        "<tr class='$($_.RowColor)'><td>$(ConvertTo-HtmlEncoded $_.Name)</td><td>$(ConvertTo-HtmlEncoded $_.Path)</td><td>$(ConvertTo-HtmlEncoded $_.OwnerNode)</td><td>$($_.SizeGB)</td><td>$csvUsageBar</td><td>$($_.FreeGB) GB</td></tr>"
+                    }) -join "`n") `
+                -EmptyMessage 'No Cluster Shared Volumes found.'
+        }
+
+        New-HyperVVmDetailsSectionHtml -AllVMs $allVMs -AllVirtualDisks $allVirtualDisks `
+            -LogicalCoresPerNuma $logicalCoresPerNuma
+
+        # CPU / NUMA Configuration
+        "<h3><i class='fas fa-microchip'></i>&nbsp;&nbsp;CPU / NUMA Configuration</h3>" +
+        "<p>Host NUMA nodes: $numaNodeCount &nbsp;|&nbsp; Logical CPUs per NUMA node: $logicalCoresPerNuma</p>" +
+        (New-HtmlTable -Headers @('VM', 'Severity', 'Finding') `
+            -Rows (($cpuNumaFindings | ForEach-Object {
+                    $rowClass = if ($_.Level -eq 'Warning') {
+                        " class='warning'" 
+                    } else {
+                        '' 
+                    }
+                    "<tr$rowClass><td>$(ConvertTo-HtmlEncoded $_.Vm)</td><td>$(ConvertTo-HtmlEncoded $_.Level)</td><td>$(ConvertTo-HtmlEncoded $_.Message)</td></tr>"
                 }) -join "`n") `
-            -EmptyMessage 'No Cluster Shared Volumes found.'
+            -EmptyMessage 'No CPU/NUMA configuration concerns found.') +
+        "<p><strong>Guidance: </strong><a href='https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/dn282282(v=ws.11)' target='_blank'>NUMA &amp; vCPU Sizing</a> &nbsp;|&nbsp; <a href='https://blog.workinghardinit.work/2016/06/21/the-hyper-v-processor-virtual-machine-reserve/' target='_blank'>CPU Reserve &amp; Maximum</a> &nbsp;|&nbsp; <a href='https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/configure-processor-compatibility-mode' target='_blank'>Processor Compatibility Mode</a> &nbsp;|&nbsp; <a href='https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/manage/manage-hyper-v-minroot-2016' target='_blank'>Host Resource Protection</a></p>"
+
+        # Replication Health
+        New-HtmlTable -Title 'Replication Health' -Icon 'fas fa-copy' `
+            -Headers @('VM Name', 'Health', 'State', 'Mode', 'Frequency', 'Last Replicated') `
+            -Rows $replRows
+
+        # Checkpoint Health
+        New-HtmlTable -Title 'Checkpoint Health' -Icon 'fas fa-camera' `
+            -Headers @('VM', 'Severity', 'Category', 'Finding') `
+            -Rows (($checkpointFindings | ForEach-Object {
+                    $rowClass = if ($_.Level -eq 'Critical') {
+                        " class='danger'" 
+                    } elseif ($_.Level -eq 'Warning') {
+                        " class='warning'" 
+                    } else {
+                        '' 
+                    }
+                    "<tr$rowClass><td>$(ConvertTo-HtmlEncoded $_.Vm)</td><td>$(ConvertTo-HtmlEncoded $_.Level)</td><td>$(ConvertTo-HtmlEncoded $_.Category)</td><td>$(ConvertTo-HtmlEncoded $_.Message)</td></tr>"
+                }) -join "`n") `
+            -EmptyMessage 'No checkpoint concerns found.'
+    ) -join "`n"
+
+    $summaryReportHTML = Get-NinjaOneCard -Title 'Hyper-V Health' -Body $reportBody -Icon 'fas fa-hard-drive'
+    try {
+        $summaryReportHTML | Ninja-Property-Set-Piped -Name hypervHealth
+    } catch {
+        Write-Warning "Failed to set NinjaOne field: $_"
     }
-
-    New-HyperVVmDetailsSectionHtml -AllVMs $allVMs -AllVirtualDisks $allVirtualDisks `
-        -LogicalCoresPerNuma $logicalCoresPerNuma
-
-    # CPU / NUMA Configuration
-    "<h3><i class='fas fa-microchip'></i>&nbsp;&nbsp;CPU / NUMA Configuration</h3>" +
-    "<p>Host NUMA nodes: $numaNodeCount &nbsp;|&nbsp; Logical CPUs per NUMA node: $logicalCoresPerNuma</p>" +
-    (New-HtmlTable -Headers @('VM', 'Severity', 'Finding') `
-        -Rows (($cpuNumaFindings | ForEach-Object {
-                $rowClass = if ($_.Level -eq 'Warning') {
-                    " class='warning'" 
-                } else {
-                    '' 
-                }
-                "<tr$rowClass><td>$(ConvertTo-HtmlEncoded $_.Vm)</td><td>$(ConvertTo-HtmlEncoded $_.Level)</td><td>$(ConvertTo-HtmlEncoded $_.Message)</td></tr>"
-            }) -join "`n") `
-        -EmptyMessage 'No CPU/NUMA configuration concerns found.') +
-    "<p><strong>Guidance: </strong><a href='https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/dn282282(v=ws.11)' target='_blank'>NUMA &amp; vCPU Sizing</a> &nbsp;|&nbsp; <a href='https://blog.workinghardinit.work/2016/06/21/the-hyper-v-processor-virtual-machine-reserve/' target='_blank'>CPU Reserve &amp; Maximum</a> &nbsp;|&nbsp; <a href='https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/configure-processor-compatibility-mode' target='_blank'>Processor Compatibility Mode</a> &nbsp;|&nbsp; <a href='https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/manage/manage-hyper-v-minroot-2016' target='_blank'>Host Resource Protection</a></p>"
-
-    # Replication Health
-    New-HtmlTable -Title 'Replication Health' -Icon 'fas fa-copy' `
-        -Headers @('VM Name', 'Health', 'State', 'Mode', 'Frequency', 'Last Replicated') `
-        -Rows $replRows
-
-    # Checkpoint Health
-    New-HtmlTable -Title 'Checkpoint Health' -Icon 'fas fa-camera' `
-        -Headers @('VM', 'Severity', 'Category', 'Finding') `
-        -Rows (($checkpointFindings | ForEach-Object {
-                $rowClass = if ($_.Level -eq 'Critical') {
-                    " class='danger'" 
-                } elseif ($_.Level -eq 'Warning') {
-                    " class='warning'" 
-                } else {
-                    '' 
-                }
-                "<tr$rowClass><td>$(ConvertTo-HtmlEncoded $_.Vm)</td><td>$(ConvertTo-HtmlEncoded $_.Level)</td><td>$(ConvertTo-HtmlEncoded $_.Category)</td><td>$(ConvertTo-HtmlEncoded $_.Message)</td></tr>"
-            }) -join "`n") `
-        -EmptyMessage 'No checkpoint concerns found.'
-) -join "`n"
-
-$summaryReportHTML = Get-NinjaOneCard -Title 'Hyper-V Health' -Body $reportBody -Icon 'fas fa-hard-drive'
-try {
-    $summaryReportHTML | Ninja-Property-Set-Piped -Name hypervHealth
-} catch {
-    Write-Warning "Failed to set NinjaOne field: $_"
-}
+} # end if ($writeHtmlReport) — report generation
 
 # Alerting — console warnings for log visibility
 if ($summary.OverprovisionedDisk) {
@@ -1321,20 +1335,20 @@ $exitChecks = @(
     [pscustomobject]@{ Flag = $alertOnRAMOverprovisioning; Condition = $summary.OverprovisionedRAM; Level = 2 }
     [pscustomobject]@{ Flag = $alertOnCPUOverprovisioning; Condition = $summary.OverprovisionedCPU; Level = 1 }
     [pscustomobject]@{
-        Flag = $alertOnReplicationCritical
+        Flag      = $alertOnReplicationCritical
         Condition = (@($replicationInfo | Where-Object {
-            $_.Health -eq 'Critical' -or
-            $_.State -in $replicationCriticalStates
-        }).Count -gt 0)
-        Level = 2
+                    $_.Health -eq 'Critical' -or
+                    $_.State -in $replicationCriticalStates
+                }).Count -gt 0)
+        Level     = 2
     }
     [pscustomobject]@{
-        Flag = $alertOnReplicationWarning
+        Flag      = $alertOnReplicationWarning
         Condition = (@($replicationInfo | Where-Object {
-            $_.Health -eq 'Warning' -or
-            $_.State -in $replicationWarningStates
-        }).Count -gt 0)
-        Level = 1
+                    $_.Health -eq 'Warning' -or
+                    $_.State -in $replicationWarningStates
+                }).Count -gt 0)
+        Level     = 1
     }
     [pscustomobject]@{ Flag = $alertOnCheckpointCritical; Condition = (@($checkpointFindings | Where-Object { $_.Level -eq 'Critical' }).Count -gt 0); Level = 2 }
     [pscustomobject]@{ Flag = $alertOnCheckpointWarning; Condition = (@($checkpointFindings | Where-Object { $_.Level -eq 'Warning' }).Count -gt 0); Level = 1 }
