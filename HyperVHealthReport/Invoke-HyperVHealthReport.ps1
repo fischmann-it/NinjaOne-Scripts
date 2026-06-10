@@ -352,7 +352,13 @@ function New-HyperVWarningsSectionHtml {
         [Parameter(Mandatory)]
         [int]$CsvCritThresholdPct,
         [Parameter(Mandatory)]
-        [int]$CsvWarnThresholdPct
+        [int]$CsvWarnThresholdPct,
+        [AllowNull()][AllowEmptyCollection()]
+        [Parameter(Mandatory)]
+        [string[]]$ReplicationCriticalStates,
+        [AllowNull()][AllowEmptyCollection()]
+        [Parameter(Mandatory)]
+        [string[]]$ReplicationWarningStates
     )
     $items = [System.Collections.Generic.List[string]]::new()
 
@@ -368,13 +374,15 @@ function New-HyperVWarningsSectionHtml {
         }
     }
 
-    foreach ($r in @($ReplicationInfo | Where-Object { $_.Health -in 'Warning', 'Critical' })) {
-        $level = if ($r.Health -eq 'Critical') {
-            'error' 
-        } else {
-            'warning' 
-        }
-        $items.Add((New-HtmlInfoCard -Level $level -Title "Replication $($r.Health): $(ConvertTo-HtmlEncoded $r.Vm)" -Description "State: $(ConvertTo-HtmlEncoded $r.State)"))
+    foreach ($r in @($ReplicationInfo | Where-Object {
+        $_.Health -in 'Warning', 'Critical' -or
+        $_.State -in $ReplicationCriticalStates -or
+        $_.State -in $ReplicationWarningStates
+    })) {
+        $isCritical = $r.Health -eq 'Critical' -or $r.State -in $ReplicationCriticalStates
+        $level = if ($isCritical) { 'error' } else { 'warning' }
+        $severity = if ($isCritical) { 'Critical' } else { 'Warning' }
+        $items.Add((New-HtmlInfoCard -Level $level -Title "Replication $severity: $(ConvertTo-HtmlEncoded $r.Vm)" -Description "State: $(ConvertTo-HtmlEncoded $r.State)"))
     }
 
     # Info-level CPU/NUMA findings (e.g. processor flags, CPU caps) are intentionally excluded
@@ -1074,6 +1082,9 @@ $replicationInfo = try {
 }
 $replicatedVmNames = @($replicationInfo | Select-Object -ExpandProperty Vm -Unique)
 $unreplicatedVms = @($allVMs | Where-Object { $replicatedVmNames -notcontains $_.Name })
+
+$replicationCriticalStates = @('Paused', 'Suspended', 'Error', 'FailedOver', 'FailOverWaitingCompletion')
+$replicationWarningStates = @('ResynchronizationRequired', 'ReadyForInitialReplication')
 $checkpointFindings = @(Get-CheckpointFindings -AllVMs $allVMs `
         -WarnAgeDays $checkpointWarnAgeDays -CritAgeDays $checkpointCritAgeDays `
         -WarnSizeGB $checkpointWarnSizeGB -CritSizeGB $checkpointCritSizeGB `
@@ -1149,7 +1160,9 @@ $reportBody = @(
     New-HyperVWarningsSectionHtml -Summary $summary -ReplicationInfo $replicationInfo `
         -CpuNumaFindings $cpuNumaFindings -CheckpointFindings $checkpointFindings `
         -CsvData $csvData -CsvCritThresholdPct $csvCritThresholdPct `
-        -CsvWarnThresholdPct $csvWarnThresholdPct
+        -CsvWarnThresholdPct $csvWarnThresholdPct `
+        -ReplicationCriticalStates $replicationCriticalStates `
+        -ReplicationWarningStates $replicationWarningStates
 
     # Resource Report
     New-HtmlTable -Title 'Resource Report' -Icon 'fas fa-gauge-high' `
@@ -1298,20 +1311,6 @@ foreach ($v in $csvWarningVolumes) {
     Write-Warning "CSV Warning: $($v.Name) ($($v.Path)) - $($v.PercentFree)% free ($($v.FreeGB) GB of $($v.SizeGB) GB)."
 }
 
-## Replication state checks, These extend the existing replication health checks
-$replicationCriticalStates = @(
-    'Paused',
-    'Suspended',
-    'Error',
-    'FailedOver',
-    'FailOverWaitingCompletion'
-)
-
-$replicationWarningStates = @(
-    'ResynchronizationRequired',
-    'ReadyForInitialReplication'
-)
-
 # Exit code: 0 = healthy, 1 = warning, 2 = critical
 # Each category's contribution is gated by its alert flag.
 # Severity rationale:
@@ -1325,16 +1324,15 @@ $exitChecks = @(
         Flag = $alertOnReplicationCritical
         Condition = (@($replicationInfo | Where-Object {
             $_.Health -eq 'Critical' -or
-            [string]$_.State -in $replicationCriticalStates
+            $_.State -in $replicationCriticalStates
         }).Count -gt 0)
         Level = 2
     }
-    
     [pscustomobject]@{
         Flag = $alertOnReplicationWarning
         Condition = (@($replicationInfo | Where-Object {
             $_.Health -eq 'Warning' -or
-            [string]$_.State -in $replicationWarningStates
+            $_.State -in $replicationWarningStates
         }).Count -gt 0)
         Level = 1
     }
@@ -1350,26 +1348,15 @@ foreach ($check in $exitChecks) {
     }
 }
 
-#Start - Replication Check States
-$criticalReplicationStateMatches = @(
-    $replicationInfo | Where-Object {
-        [string]$_.State -in $replicationCriticalStates
-    }
-)
-
-$warningReplicationStateMatches = @(
-    $replicationInfo | Where-Object {
-        [string]$_.State -in $replicationWarningStates
-    }
-)
+$criticalReplicationStateMatches = @($replicationInfo | Where-Object { $_.State -in $replicationCriticalStates })
+$warningReplicationStateMatches = @($replicationInfo | Where-Object { $_.State -in $replicationWarningStates })
 
 foreach ($r in $criticalReplicationStateMatches) {
-    Write-Output "Replication critical state: VM '$($r.Vm)' State '$($r.State)' Health '$($r.Health)' Mode '$($r.ReplicationMode)'"
+    Write-Warning "Replication critical state: VM '$($r.Vm)' State '$($r.State)' Health '$($r.Health)' Mode '$($r.ReplicationMode)'"
 }
 
 foreach ($r in $warningReplicationStateMatches) {
-    Write-Output "Replication warning state: VM '$($r.Vm)' State '$($r.State)' Health '$($r.Health)' Mode '$($r.ReplicationMode)'"
+    Write-Warning "Replication warning state: VM '$($r.Vm)' State '$($r.State)' Health '$($r.Health)' Mode '$($r.ReplicationMode)'"
 }
-#End - Replication Check States
 
 exit $exitLevel
