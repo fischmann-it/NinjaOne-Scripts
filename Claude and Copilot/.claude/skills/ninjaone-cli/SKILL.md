@@ -1,6 +1,6 @@
 ---
 name: ninjaone-cli
-description: Use when code uses ninjarmm-cli, %NINJARMMCLI%, Ninja-Property-Get, Ninja-Property-Set, Get-NinjaProperty, Set-NinjaProperty, or user asks about NinjaOne CLI commands, legacy PowerShell commands, or documentation template access.
+description: Using the ninjarmm-cli executable and legacy PowerShell commands for custom field management via command-line interface. Use when scripts need to interact with NinjaOne custom fields from Batch/Shell scripts, handle documentation templates, work with dropdown GUIDs directly, manage fields in non-PowerShell environments, or use piped data for large content. Covers all field types including secure, WYSIWYG, and documentation fields with examples for Windows, Linux, and macOS.
 ---
 
 # NinjaOne CLI Tool
@@ -87,11 +87,11 @@ Get-NinjaProperty [-Name] <String[]> [[-Type] <String>] [[-DocumentName] <String
 
 **Examples:**
 ```powershell
-# WITHOUT type specified - Dropdown fields will return a GUID
+# WITHOUT type specified - returns GUID
 Get-NinjaProperty -Name "Environment"
 # Output: 74a6ffda-708e-435a-86e3-40b67c4f981a
 
-# WITH type specified - Dropdown fields will return a friendly name, this is preferred.
+# WITH type specified - returns friendly name
 Get-NinjaProperty -Name "Environment" -Type "Dropdown"
 # Output: Production
 
@@ -328,6 +328,60 @@ Ninja-Property-Get globaldropdown
 Ninja-Property-Set globaldropdown f1ba449c-fd34-49df-b878-af3877180d17
 ```
 
+#### Resolving Dropdown GUIDs to Friendly Names (Shell / Batch)
+
+> **Critical:** `ninjarmm-cli get <dropdown>` and the legacy `Ninja-Property-Get`
+> return the option **GUID**, not the friendly name. Only the enhanced
+> `Get-NinjaProperty -Type Dropdown` cmdlet resolves the name automatically —
+> and that cmdlet is **Windows-only**. In Batch and in Shell scripts on
+> macOS/Linux you must map the GUID yourself using the `options` command, whose
+> lines are formatted `GUID=OptionName`.
+
+This matters whenever a script branches on a dropdown value (e.g. `Install` /
+`Uninstall` / `No Action`). Comparing the raw GUID against friendly-name strings
+will never match, so every branch silently falls through to the default.
+
+**Shell (bash 3.2+, macOS/Linux) — GUID → friendly name:**
+```bash
+NINJA_CLI='/Applications/NinjaRMMAgent/programdata/ninjarmm-cli'  # macOS
+# NINJA_CLI="$NINJA_DATA_PATH/ninjarmm-cli"                       # Linux
+
+# Read the selected GUID, then map it to its option name.
+guid=$("$NINJA_CLI" get sentineloneDeploymentBehavior 2>/dev/null)
+name=$("$NINJA_CLI" options sentineloneDeploymentBehavior 2>/dev/null \
+    | awk -F= -v g="$guid" '{ v=$0; sub(/^[^=]*=/, "", v); if ($1 == g) { print v; exit } }')
+
+# `name` now holds e.g. "Install". Fall back to the raw value if unmatched
+# (some agent versions may already return a name).
+[ -z "$name" ] && name="$guid"
+```
+
+**Shell — friendly name → GUID (needed before `set`, though `set` also accepts the name):**
+```bash
+guid=$("$NINJA_CLI" options sentineloneDeploymentBehavior 2>/dev/null \
+    | awk -F= -v n='No Action' '{ v=$0; sub(/^[^=]*=/, "", v); if (v == n) { print $1; exit } }')
+"$NINJA_CLI" set sentineloneDeploymentBehavior "$guid"
+```
+
+> **Why `sub()` instead of `$2`:** using `awk -F=` with `$2` truncates option
+> names that themselves contain `=`. Stripping only the first `GUID=` prefix with
+> `sub(/^[^=]*=/, "", v)` preserves the full name.
+
+**Batch (Windows) — GUID → friendly name:**
+```batch
+REM Get the selected GUID
+for /f "delims=" %%g in ('%NINJARMMCLI% get Environment') do set "SELECTED_GUID=%%g"
+
+REM Map GUID to its option name
+for /f "tokens=1* delims==" %%a in ('%NINJARMMCLI% options Environment') do (
+    if "%%a"=="%SELECTED_GUID%" set "SELECTED_NAME=%%b"
+)
+echo Selected: %SELECTED_NAME%
+```
+
+> On Windows, prefer `Get-NinjaProperty -Type Dropdown` (returns the name
+> directly) over this Batch pattern whenever PowerShell is available.
+
 ### Email Fields
 
 **CLI:**
@@ -474,6 +528,11 @@ Ninja-Property-Get globalmultiselect
 # Output: 333f541e-747e-4a1e-a2e2-a82c1c2f2008,74a6ffda-708e-435a-86e3-40b67c4f981a
 ```
 
+> **Same GUID caveat as dropdowns:** `get` returns comma-separated GUIDs, not
+> names. In Shell/Batch, split on `,` and map each GUID through `options`
+> (`GUID=OptionName`). See
+> [Resolving Dropdown GUIDs to Friendly Names](#resolving-dropdown-guids-to-friendly-names-shell--batch).
+
 ### Phone Number Fields
 
 **CLI:**
@@ -531,7 +590,7 @@ Ninja-Property-Set globalsecure sampletext2
 ```
 
 **Security Best Practices:**
-
+```
 For Windows (Batch):
 ```batch
 @echo off
@@ -850,7 +909,8 @@ To read exit code:
 
 1. **Use enhanced module commands** - Prefer `Get-NinjaProperty`/`Set-NinjaProperty` over legacy commands for automatic type handling
 2. **Specify field types** - Always use `-Type` parameter to get/set friendly values instead of GUIDs
-3. **Use environment variable** - Reference via `%NINJARMMCLI%` on Windows or `$NINJA_DATA_PATH/ninjarmm-cli` on Linux/macOS
+3. **Map dropdown GUIDs in Shell/Batch** - `get` returns the GUID, and `-Type Dropdown` is Windows-only. On macOS/Linux/Batch, resolve GUID↔name via `options` (`GUID=OptionName`) before comparing or branching, or comparisons against friendly names will never match
+4. **Use environment variable** - Reference via `%NINJARMMCLI%` on Windows or `$NINJA_DATA_PATH/ninjarmm-cli` on Linux/macOS
 4. **Secure field protection** - Disable echo before setting secure values (@echo off/@echo on)
 5. **Error handling** - Check `%ERRORLEVEL%` (Windows) or `$?` (Unix) after CLI commands
 6. **Piped data** - Use `--stdin` for large content: `dir | %NINJARMMCLI% set --stdin Notes`
