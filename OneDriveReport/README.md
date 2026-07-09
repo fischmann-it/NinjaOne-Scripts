@@ -137,3 +137,7 @@ The script also writes to the activity log:
 - Requires a user to be logged in at the console; if no user is present, the status file will not be generated and the script logs a message.
 - The 280,000-file guidance reflects OneDrive's practical sync performance ceiling.
 - Temporary JSON output is written to `C:\temp` and overwritten on each run.
+
+
+<img width="1643" height="596" alt="image" src="https://github.com/user-attachments/assets/9020e9b2-86a8-465d-960c-3d64db776b12" />
+
