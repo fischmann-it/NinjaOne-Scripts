@@ -321,7 +321,7 @@ function Resolve-HostAddressList {
     }
 }
 
-# Windows Update error codes -> meaning, severity, and fix. Severity is per-code so transient codes stay Info.
+# Windows Update error codes -> meaning, severity, and fix. Severity is per-code so transient codes stay Info. https://learn.microsoft.com/en-us/windows/deployment/update/windows-update-error-reference
 $script:WuErrorMap = @{
     '0X80070002' = @{ Severity = 'Warning'; Text = 'File not found - update payload missing or corrupted (0x80070002).'; Fix = 'Reset SoftwareDistribution, then re-scan.' }
     '0X80070003' = @{ Severity = 'Warning'; Text = 'Path not found - servicing path missing or corrupted (0x80070003).'; Fix = 'Reset SoftwareDistribution, then re-scan.' }
