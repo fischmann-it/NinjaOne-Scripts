@@ -10,7 +10,8 @@ This script collects capacity and health data from Hyper-V hosts and displays it
 
 - Hyper-V host with PowerShell module installed
 - Script must run as **SYSTEM** (default for NinjaOne automations)
-- One WYSIWYG Field
+- One WYSIWYG Field (HTML report)
+- One MultiLine Field (machine-parseable JSON)
 
 ---
 
@@ -26,6 +27,19 @@ This script collects capacity and health data from Hyper-V hosts and displays it
    - **Permissions**: Automations:Write, Technician access: Read, API: None (reduce pulling WYSIWYG fields via API, they can be huge)
    - **Advanced Settings**: Recommend expanding large values on render, and adding this field to it's own Custom Field Tab.
 4. Click **Save**
+5. Click **Add custom Field** again to create the JSON field
+6. Configure:
+   - **Field Type**: **MultiLine**
+   - **Name**: `hypervHealthData`
+   - **Label**: `Hyper-V Health Data`
+   - **Inheritance**: Device
+   - **Permissions**: Automations:Write, Technician access: Read, API: Read (this field is meant to be pulled and parsed via the API)
+   - **Advanced Settings**: Raise the character limit to accommodate large JSON payloads on busy hosts.
+7. Click **Save**
+
+> The MultiLine field holds a compact JSON object with every value the script collects
+> (host/summary/VMs/disks/replication/checkpoints/networking) plus a unified `findings` list. Retrieve
+> it via the NinjaOne API and `ConvertFrom-Json` to parse.
 
 ---
 
@@ -74,6 +88,17 @@ These flags let you control which categories contribute to the exit code. Set to
 |-----------------------|---------|---------|----------------------------------------------------------------|
 | `csvWarnThresholdPct` | Integer | `15`    | CSV % free below which a volume is flagged as warning          |
 | `csvCritThresholdPct` | Integer | `5`     | CSV % free below which a volume is flagged as critical         |
+
+#### Operation Mode
+
+Both outputs are written by default. When deploying as a **Condition** (which polls frequently), set
+both to `false` to skip the redundant field writes on every cycle and only evaluate exit codes — or
+leave the JSON on and the HTML off, etc.
+
+| Variable          | Type    | Default | Description                                                                 |
+|-------------------|---------|---------|-----------------------------------------------------------------------------|
+| `writeHtmlReport` | Boolean | `true`  | Generate the HTML report and write the `hypervHealth` WYSIWYG field.        |
+| `writeJsonReport` | Boolean | `true`  | Generate the JSON object and write the `hypervHealthData` MultiLine field.  |
 
 ---
 
@@ -146,13 +171,30 @@ Comprehensive per-VM breakdown including:
 - vCPU count with NUMA span warnings
 - RAM allocation (assigned or startup)
 - Auto-start configuration
+- VM generation, configuration version, and uptime
+- Integration Services state, with per-service tags flagging disabled or non-OK services
 - Virtual disk details with type (Fixed/Dynamic/Differencing) and committed/provisioned space
+- Per-VM network adapters (switch, MAC, VLAN, guest IP addresses, connection state)
 - Color-coded state indicators
 
 ![Screenshot placeholder - VM details section](screenshots/vm-details.png)
 *Detailed per-VM information including disks and configuration*
 
-### 6. CPU / NUMA Configuration
+### 6. Networking
+
+Host and VM networking inventory:
+
+- **Host Network Adapters**: name, description, MAC, link speed, status, physical/virtual
+- **Host IP Configuration**: IPv4 address + prefix (subnet), default gateway, DNS servers
+- **Virtual Switches**: type (External/Internal/Private), uplink adapter, SET and Management-OS flags
+- **NIC Teams**: LBFO and Switch Embedded Teaming (SET) teams with mode, load balancing, and members
+
+> Per-VM network adapters (VLAN, MAC, guest IPs) are shown inline under **VM Details**, not here.
+
+![Screenshot placeholder - Networking section](screenshots/networking.png)
+*Host and VM networking inventory*
+
+### 7. CPU / NUMA Configuration
 
 Advanced processor configuration findings including:
 
@@ -166,7 +208,7 @@ Advanced processor configuration findings including:
 ![Screenshot placeholder - CPU/NUMA section](screenshots/cpu-numa-section.png)
 *CPU and NUMA configuration findings*
 
-### 7. Replication Health
+### 8. Replication Health
 
 Hyper-V Replica status with complete replication health monitoring:
 
@@ -180,7 +222,7 @@ Hyper-V Replica status with complete replication health monitoring:
 ![Screenshot placeholder - Replication Health](screenshots/replication-health.png)
 *VM Replication Health Status*
 
-### 8. Checkpoint Health
+### 9. Checkpoint Health
 
 Checkpoint analysis showing:
 
@@ -190,6 +232,42 @@ Checkpoint analysis showing:
 
 ![Screenshot placeholder - Checkpoint Health](screenshots/checkpoint-health.png)
 *VM Checkpoint Health Status*
+
+---
+
+## JSON Output (`hypervHealthData`)
+
+In addition to the HTML report, the script writes a compact JSON object to the `hypervHealthData`
+MultiLine field for retrieval and parsing via the NinjaOne API. It contains everything the script
+collects plus a unified `findings` list.
+
+Top-level keys:
+
+| Key | Description |
+| --- | ----------- |
+| `schemaVersion` | JSON schema version string. |
+| `generatedAt` | UTC timestamp (ISO-8601). |
+| `hostName` | Host computer name. |
+| `exitLevel` | `0` healthy, `1` warning, `2` critical (matches the script exit code). |
+| `host` | Total memory/cores, NUMA layout, clustered flag. |
+| `summary` | Overprovisioning totals and boolean flags (disk/RAM/CPU). |
+| `physicalDrives` | Per-drive capacity, provisioned/committed, headroom. |
+| `clusterSharedVolumes` | CSV capacity/free/owner (clustered hosts). |
+| `virtualMachines` | Per-VM state, CPU, RAM, generation, uptime, integration services, `disks[]`, `networkAdapters[]`, `integrationServices[]`. |
+| `memory` / `cpu` | Per-VM memory and processor configuration. |
+| `replication` / `unreplicatedVMs` | Replica health/state per VM and VMs with no replication. |
+| `checkpoints` | Checkpoint age/size/chain-depth findings. |
+| `cpuNumaFindings` | CPU/NUMA advisory findings. |
+| `network` | `hostAdapters[]`, `virtualSwitches[]`, `nicTeams[]`, `vmNetworkAdapters[]`, `hostIpConfig[]`. |
+| `findings` | Unified list: `{ category, severity, target, message }`. |
+
+Example retrieval and parse (via the NinjaOne API, per-device custom field value):
+
+```powershell
+$data = $customFieldValue | ConvertFrom-Json
+$data.findings | Where-Object Severity -eq 'Critical'
+$data.network.vmNetworkAdapters | Select-Object Vm, AdapterName, VlanMode, AccessVlanId
+```
 
 ---
 
